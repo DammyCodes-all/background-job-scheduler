@@ -3,11 +3,12 @@ import {
   IsOptional,
   IsObject,
   IsInt,
-  IsDateString,
+  IsDate,
   IsArray,
   IsUUID,
   IsEnum,
 } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { JobInterval } from '../entities/job.entity';
 
@@ -36,7 +37,8 @@ export class CreateJobDto {
 
   @ApiPropertyOptional({ description: 'Scheduled execution time' })
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   scheduledAt?: Date;
 
   @ApiPropertyOptional({
@@ -49,10 +51,15 @@ export class CreateJobDto {
   interval?: JobInterval;
 
   @ApiPropertyOptional({
+    name: 'dependency_ids',
     example: ['123e4567-e89b-12d3-a456-426614174000'],
-    description: 'Job dependencies',
+    description: 'The ids of this job dependencies',
   })
   @IsOptional()
+  @Transform(
+    ({ obj, value }: { obj: { dependency_ids?: string[] }; value: unknown }) =>
+      value === undefined ? obj.dependency_ids : value,
+  )
   @IsArray()
   @IsUUID('all', { each: true })
   dependencyIds?: string[];

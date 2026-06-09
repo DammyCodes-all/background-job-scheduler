@@ -4,26 +4,26 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { JobsModule } from './jobs/jobs.module';
+import { Env, validateEnv } from './config/env.validation';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: validateEnv,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService<Env, true>) => ({
         type: 'postgres',
-        host: configService.get<string>('DB_HOST', 'localhost'),
-        port: configService.get<number>('DB_PORT', 5432),
-        username: configService.get<string>('DB_USERNAME', 'postgres'),
-        password: configService.get<string>('DB_PASSWORD', 'postgres'),
-        database: configService.get<string>(
-          'DB_NAME',
-          'background_job_scheduler',
-        ),
+        host: configService.get('DB_HOST', { infer: true }),
+        port: configService.get('DB_PORT', { infer: true }),
+        username: configService.get('DB_USERNAME', { infer: true }),
+        password: configService.get('DB_PASSWORD', { infer: true }),
+        database: configService.get('DB_NAME', { infer: true }),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get<string>('NODE_ENV') !== 'production', // Autoloads schema changes in dev
+        migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
+        synchronize: false,
       }),
       inject: [ConfigService],
     }),
