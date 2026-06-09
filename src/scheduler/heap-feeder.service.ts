@@ -97,6 +97,7 @@ export class HeapFeederService implements OnModuleInit, OnModuleDestroy {
 
     if (boostedCount > 0) {
       this.resetHeap();
+      await this.feedHeapOnce(now);
       this.logger.log(
         `Boosted ${boostedCount} starving pending job(s). Threshold: ${STARVATION_THRESHOLD_MS}ms.`,
       );
