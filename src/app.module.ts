@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { JobsModule } from './jobs/jobs.module';
 import { Env, validateEnv } from './config/env.validation';
+import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { Env, validateEnv } from './config/env.validation';
       inject: [ConfigService],
     }),
     JobsModule,
+    SchedulerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

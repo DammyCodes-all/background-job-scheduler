@@ -8,7 +8,7 @@ import {
   IsUUID,
   IsEnum,
 } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { JobInterval } from '../entities/job.entity';
 
@@ -56,10 +56,7 @@ export class CreateJobDto {
     description: 'The ids of this job dependencies',
   })
   @IsOptional()
-  @Transform(
-    ({ obj, value }: { obj: { dependency_ids?: string[] }; value: unknown }) =>
-      value === undefined ? obj.dependency_ids : value,
-  )
+  @Expose({ name: 'dependency_ids' })
   @IsArray()
   @IsUUID('all', { each: true })
   dependencyIds?: string[];
