@@ -1,8 +1,9 @@
-import { FindManyOptions, Repository } from 'typeorm';
+import { FindManyOptions, LessThanOrEqual, Repository } from 'typeorm';
 import { Job, JobStatus } from '../jobs/entities/job.entity';
 import {
   HeapFeederService,
   MIN_PRIORITY,
+  STARVATION_SWEEP_INTERVAL_MS,
   STARVATION_THRESHOLD_MS,
 } from './heap-feeder.service';
 import { JobPriorityHeap } from './job-priority-heap';
@@ -93,6 +94,42 @@ describe('HeapFeederService', () => {
     });
   });
 
+  it('ignores future scheduled jobs', async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+    const now = new Date('2026-06-09T10:00:00.000Z');
+
+    repository.find.mockResolvedValue([]);
+
+    await expect(service.feedHeapOnce(now)).resolves.toBe(0);
+
+    const [findOptions] = repository.find.mock.calls[0] as [
+      FindManyOptions<Job>,
+    ];
+
+    expect(findOptions.where).toMatchObject({
+      status: JobStatus.PENDING,
+      scheduledAt: LessThanOrEqual(now),
+    });
+  });
+
+  it('ignores non-pending jobs in the database query', async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+    const now = new Date('2026-06-09T10:00:00.000Z');
+
+    repository.find.mockResolvedValue([]);
+    await service.feedHeapOnce(now);
+
+    const [findOptions] = repository.find.mock.calls[0] as [
+      FindManyOptions<Job>,
+    ];
+
+    expect(findOptions.where).toMatchObject({
+      status: JobStatus.PENDING,
+    });
+  });
+
   it('removes a job from inHeap when popped', async () => {
     const repository = createRepository();
     const service = createService(repository);
@@ -115,6 +152,9 @@ describe('HeapFeederService', () => {
     const service = createService(repository);
     const now = new Date('2026-06-09T10:00:00.000Z');
     const expectedCutoff = new Date(now.getTime() - STARVATION_THRESHOLD_MS);
+    const expectedBoostCutoff = new Date(
+      now.getTime() - STARVATION_SWEEP_INTERVAL_MS,
+    );
 
     repository.createQueryBuilder.mockReturnValue(queryBuilder);
     queryBuilder.execute.mockResolvedValue({ affected: 3 });
@@ -124,12 +164,13 @@ describe('HeapFeederService', () => {
 
     expect(queryBuilder.update).toHaveBeenCalledWith(Job);
     const [setValue] = queryBuilder.set.mock.calls[0] as [
-      { priority: () => string },
+      { priority: () => string; lastPriorityBoostedAt: () => string },
     ];
 
     expect(setValue.priority()).toBe(
       `GREATEST("priority" - 1, ${MIN_PRIORITY})`,
     );
+    expect(setValue.lastPriorityBoostedAt()).toBe('CURRENT_TIMESTAMP');
     expect(queryBuilder.where).toHaveBeenCalledWith('"status" = :status', {
       status: JobStatus.PENDING,
     });
@@ -140,6 +181,10 @@ describe('HeapFeederService', () => {
     expect(queryBuilder.andWhere).toHaveBeenCalledWith(
       '"priority" > :minPriority',
       { minPriority: MIN_PRIORITY },
+    );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      '"lastPriorityBoostedAt" IS NULL OR "lastPriorityBoostedAt" <= :boostCutoff',
+      { boostCutoff: expectedBoostCutoff },
     );
   });
 });

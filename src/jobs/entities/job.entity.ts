@@ -122,6 +122,13 @@ export class Job {
   createdAt!: Date;
 
   @ApiProperty({
+    description: 'When this job was last priority-boosted for starvation prevention',
+    required: false,
+  })
+  @Column({ type: 'timestamptz', nullable: true })
+  lastPriorityBoostedAt?: Date;
+
+  @ApiProperty({
     description: 'When worker picked it up. Useful for detecting stuck jobs',
   })
   @Column({ type: 'timestamptz', nullable: true })

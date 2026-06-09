@@ -81,16 +81,24 @@ export class HeapFeederService implements OnModuleInit, OnModuleDestroy {
 
   async preventStarvationOnce(now = new Date()): Promise<number> {
     const starvationCutoff = new Date(now.getTime() - STARVATION_THRESHOLD_MS);
+    const boostCutoff = new Date(
+      now.getTime() - STARVATION_SWEEP_INTERVAL_MS,
+    );
 
     const result = await this.jobsRepository
       .createQueryBuilder()
       .update(Job)
       .set({
         priority: () => `GREATEST("priority" - 1, ${MIN_PRIORITY})`,
+        lastPriorityBoostedAt: () => 'CURRENT_TIMESTAMP',
       })
       .where('"status" = :status', { status: JobStatus.PENDING })
       .andWhere('"scheduledAt" <= :starvationCutoff', { starvationCutoff })
       .andWhere('"priority" > :minPriority', { minPriority: MIN_PRIORITY })
+      .andWhere(
+        '"lastPriorityBoostedAt" IS NULL OR "lastPriorityBoostedAt" <= :boostCutoff',
+        { boostCutoff },
+      )
       .execute();
 
     const boostedCount = result.affected ?? 0;
