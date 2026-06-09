@@ -6,8 +6,10 @@ import {
   IsDateString,
   IsArray,
   IsUUID,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { JobInterval } from '../entities/job.entity';
 
 export class CreateJobDto {
   @ApiProperty({ example: 'send_email', description: 'The type of job to run' })
@@ -38,12 +40,13 @@ export class CreateJobDto {
   scheduledAt?: Date;
 
   @ApiPropertyOptional({
-    example: 'every_1_minute',
+    enum: JobInterval,
+    example: JobInterval.EVERY_MINUTE,
     description: 'Recurring interval',
   })
   @IsOptional()
-  @IsString()
-  interval?: string;
+  @IsEnum(JobInterval)
+  interval?: JobInterval;
 
   @ApiPropertyOptional({
     example: ['123e4567-e89b-12d3-a456-426614174000'],

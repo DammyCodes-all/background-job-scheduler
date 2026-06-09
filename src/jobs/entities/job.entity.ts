@@ -15,6 +15,17 @@ export enum JobStatus {
   CANCELLED = 'cancelled',
 }
 
+export enum JobInterval {
+  EVERY_MINUTE = 'every_1_minute',
+  EVERY_5_MINUTES = 'every_5_minutes',
+  EVERY_15_MINUTES = 'every_15_minutes',
+  EVERY_30_MINUTES = 'every_30_minutes',
+  HOURLY = 'hourly',
+  DAILY = 'daily',
+  WEEKLY = 'weekly',
+  MONTHLY = 'monthly',
+}
+
 @Entity('jobs')
 @Index('IDX_JOBS_PENDING', ['status', 'scheduledAt', 'priority'], {
   where: "status = 'pending'",
@@ -77,11 +88,12 @@ export class Job {
   scheduledAt!: Date;
 
   @ApiProperty({
-    example: 'every_1_minute',
+    enum: JobInterval,
+    example: JobInterval.EVERY_MINUTE,
     description: 'Null means one-shot. Non-null means recurring',
   })
   @Column({ type: 'varchar', nullable: true })
-  interval?: string;
+  interval?: JobInterval;
 
   @ApiProperty({
     example: ['123e4567-e89b-12d3-a456-426614174000'],
