@@ -81,9 +81,7 @@ export class HeapFeederService implements OnModuleInit, OnModuleDestroy {
 
   async preventStarvationOnce(now = new Date()): Promise<number> {
     const starvationCutoff = new Date(now.getTime() - STARVATION_THRESHOLD_MS);
-    const boostCutoff = new Date(
-      now.getTime() - STARVATION_SWEEP_INTERVAL_MS,
-    );
+    const boostCutoff = new Date(now.getTime() - STARVATION_SWEEP_INTERVAL_MS);
 
     const result = await this.jobsRepository
       .createQueryBuilder()
