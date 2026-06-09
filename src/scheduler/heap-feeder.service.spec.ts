@@ -118,6 +118,7 @@ describe('HeapFeederService', () => {
 
     repository.createQueryBuilder.mockReturnValue(queryBuilder);
     queryBuilder.execute.mockResolvedValue({ affected: 3 });
+    repository.find.mockResolvedValue([]);
 
     await expect(service.preventStarvationOnce(now)).resolves.toBe(3);
 
@@ -133,7 +134,7 @@ describe('HeapFeederService', () => {
       status: JobStatus.PENDING,
     });
     expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-      '"createdAt" <= :starvationCutoff',
+      '"scheduledAt" <= :starvationCutoff',
       { starvationCutoff: expectedCutoff },
     );
     expect(queryBuilder.andWhere).toHaveBeenCalledWith(
