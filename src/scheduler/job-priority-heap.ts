@@ -1,0 +1,49 @@
+import { Injectable } from '@nestjs/common';
+import Heap from 'heap';
+import { Job } from '../jobs/entities/job.entity';
+
+@Injectable()
+export class JobPriorityHeap {
+  private readonly heap = new Heap<Job>((left, right) => {
+    const priorityDiff = left.priority - right.priority;
+
+    if (priorityDiff !== 0) {
+      return priorityDiff;
+    }
+
+    const scheduledDiff =
+      left.scheduledAt.getTime() - right.scheduledAt.getTime();
+
+    if (scheduledDiff !== 0) {
+      return scheduledDiff;
+    }
+
+    return left.createdAt.getTime() - right.createdAt.getTime();
+  });
+
+  push(job: Job): void {
+    this.heap.push(job);
+  }
+
+  pop(): Job | undefined {
+    return this.heap.pop();
+  }
+
+  peek(): Job | undefined {
+    return this.heap.peek();
+  }
+
+  size(): number {
+    return this.heap.size();
+  }
+
+  isEmpty(): boolean {
+    return this.heap.empty();
+  }
+
+  clear(): void {
+    while (!this.heap.empty()) {
+      this.heap.pop();
+    }
+  }
+}
