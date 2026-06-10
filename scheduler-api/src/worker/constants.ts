@@ -3,6 +3,7 @@ import { JobInterval } from '../jobs/entities/job.entity';
 export const WORKER_INTERVAL_MS = 1_000;
 export const DEPENDENCY_REQUEUE_DELAY_MS = 10_000;
 export const DLQ_THRESHOLD = 10;
+export const DLQ_ALERT_COOLDOWN_MS = 3_600_000;
 
 export const BACKOFF_DELAYS_MS = [1_000, 5_000, 25_000];
 export const BACKOFF_JITTER_FACTOR = 0.5;

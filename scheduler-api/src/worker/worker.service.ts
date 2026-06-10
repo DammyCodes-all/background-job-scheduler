@@ -13,6 +13,7 @@ import {
   BACKOFF_DELAYS_MS,
   BACKOFF_JITTER_FACTOR,
   DEPENDENCY_REQUEUE_DELAY_MS,
+  DLQ_ALERT_COOLDOWN_MS,
   DLQ_THRESHOLD,
   REPEAT_INTERVAL_MS,
   WORKER_INTERVAL_MS,
@@ -26,6 +27,7 @@ import { JobLogger } from './job-logger.service';
 export class WorkerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WorkerService.name);
   private timer?: ReturnType<typeof setTimeout>;
+  private lastDlqAlertAt = 0;
 
   constructor(
     private readonly heapFeeder: HeapFeederService,
@@ -190,9 +192,14 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         `Failed after ${newRetryCount} retries: ${errMsg}`,
       );
 
+      const now = Date.now();
       const dlqCount = await this.jobsRepository.countBy({ inDlq: true });
 
-      if (dlqCount === DLQ_THRESHOLD) {
+      if (
+        dlqCount >= DLQ_THRESHOLD &&
+        now - this.lastDlqAlertAt >= DLQ_ALERT_COOLDOWN_MS
+      ) {
+        this.lastDlqAlertAt = now;
         const alertJob = await this.jobsRepository.save({
           type: 'dlq_alert',
           payload: { dlqCount },

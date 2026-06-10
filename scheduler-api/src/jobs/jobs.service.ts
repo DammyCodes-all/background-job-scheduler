@@ -103,6 +103,26 @@ export class JobsService {
     return this.findOne(id);
   }
 
+  async cancel(id: string): Promise<Job> {
+    const job = await this.findOne(id);
+
+    if (job.status !== JobStatus.PENDING) {
+      throw new BadRequestException(
+        `Cannot cancel job with status ${job.status}. Only pending jobs can be cancelled.`,
+      );
+    }
+
+    await this.jobsRepository.update(id, {
+      status: JobStatus.CANCELLED,
+    });
+    this.sseService.emit('job_updated', {
+      jobId: id,
+      status: JobStatus.CANCELLED,
+    });
+
+    return this.findOne(id);
+  }
+
   async remove(id: string): Promise<void> {
     const job = await this.findOne(id);
 

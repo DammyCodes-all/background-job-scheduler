@@ -90,6 +90,21 @@ export class JobsController {
     return this.jobsService.update(id, updateJobDto);
   }
 
+  @Patch(':id/cancel')
+  @ApiOperation({ summary: 'Cancel a pending job' })
+  @ApiResponse({
+    status: 200,
+    description: 'The job has been cancelled.',
+    type: Job,
+  })
+  @ApiBadRequestResponse({
+    description: 'Only pending jobs can be cancelled.',
+  })
+  @ApiNotFoundResponse({ description: 'Job not found.' })
+  cancel(@Param('id') id: string) {
+    return this.jobsService.cancel(id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a job' })
   @ApiResponse({

@@ -185,20 +185,40 @@ describe('JobsService', () => {
     });
   });
 
-  it('emits job_updated when cancelling a job', async () => {
+  it('cancels a pending job', async () => {
     const repository = createRepository();
-    repository.findOneBy.mockResolvedValue({
-      id: 'job-1',
-      status: JobStatus.PENDING,
-    });
+    repository.findOneBy
+      .mockResolvedValueOnce({ id: 'job-1', status: JobStatus.PENDING })
+      .mockResolvedValueOnce({
+        id: 'job-1',
+        status: JobStatus.CANCELLED,
+      });
     const service = createService(repository);
 
-    await service.update('job-1', { status: JobStatus.CANCELLED });
+    const result = await service.cancel('job-1');
 
+    expect(repository.update).toHaveBeenCalledWith('job-1', {
+      status: JobStatus.CANCELLED,
+    });
+    expect(result.status).toBe(JobStatus.CANCELLED);
     expect(mockSseService.emit).toHaveBeenCalledWith('job_updated', {
       jobId: 'job-1',
       status: JobStatus.CANCELLED,
     });
+  });
+
+  it('rejects cancel when job is processing', async () => {
+    const repository = createRepository();
+    repository.findOneBy.mockResolvedValue({
+      id: 'job-1',
+      status: JobStatus.PROCESSING,
+    });
+    const service = createService(repository);
+
+    await expect(service.cancel('job-1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(repository.update).not.toHaveBeenCalled();
   });
 
   it('rejects retry when job is not in the DLQ', async () => {

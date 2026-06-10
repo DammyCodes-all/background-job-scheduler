@@ -355,6 +355,64 @@ describe('WorkerService', () => {
       });
     });
 
+    it('creates a dlq_alert when DLQ count exceeds the threshold', async () => {
+      const job = createJob({
+        id: 'job-dlq-above',
+        retryCount: 2,
+        maxRetries: 3,
+      });
+
+      heapFeeder.popNextJob.mockResolvedValue(job);
+      queryBuilder.execute.mockResolvedValue({ affected: 1 });
+      handlersRegistry.get.mockReturnValue(undefined);
+      defaultHandler.execute.mockRejectedValue(new Error('fail'));
+      jobsRepository.countBy.mockResolvedValue(15);
+      jobsRepository.save.mockResolvedValue({ id: 'alert-2' } as Job);
+
+      await service.tick();
+
+      expect(jobsRepository.save).toHaveBeenCalledWith({
+        type: 'dlq_alert',
+        payload: { dlqCount: 15 },
+        priority: 0,
+        status: JobStatus.PENDING,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        scheduledAt: expect.any(Date),
+      });
+    });
+
+    it('respects cooldown and does not fire duplicate dlq alerts', async () => {
+      const job = createJob({
+        id: 'job-dlq-cooldown',
+        retryCount: 2,
+        maxRetries: 3,
+      });
+
+      heapFeeder.popNextJob.mockResolvedValue(job);
+      queryBuilder.execute.mockResolvedValue({ affected: 1 });
+      handlersRegistry.get.mockReturnValue(undefined);
+      defaultHandler.execute.mockRejectedValue(new Error('fail'));
+      jobsRepository.countBy.mockResolvedValue(10);
+      jobsRepository.save.mockResolvedValue({ id: 'alert-1' } as Job);
+
+      // First tick fires the alert
+      await service.tick();
+      expect(jobsRepository.save).toHaveBeenCalled();
+
+      (jobsRepository.save as jest.Mock).mockClear();
+
+      // Second tick immediately after should not fire (cooldown)
+      await service.tick();
+
+      const dlqAlertCalls = (
+        jobsRepository.save as jest.Mock
+      ).mock.calls.filter(
+        (call: any[]) =>
+          (call[0] as Record<string, unknown>)?.type === 'dlq_alert',
+      );
+      expect(dlqAlertCalls).toHaveLength(0);
+    });
+
     it('does not create dlq_alert when DLQ count is below threshold', async () => {
       const job = createJob({
         id: 'job-dlq-below',
