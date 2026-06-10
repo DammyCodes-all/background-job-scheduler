@@ -1,0 +1,209 @@
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
+import { Job, JobInterval, JobStatus } from '../jobs/entities/job.entity';
+import { HeapFeederService } from '../scheduler/heap-feeder.service';
+import { DefaultJobHandler } from './default-job-handler';
+import { HandlersRegistry } from './handlers-registry';
+import { JobLogger } from './job-logger.service';
+
+const WORKER_INTERVAL_MS = 1_000;
+const DEPENDENCY_REQUEUE_DELAY_MS = 10_000;
+
+const BACKOFF_DELAYS_MS = [1_000, 5_000, 25_000];
+const BACKOFF_JITTER_FACTOR = 0.5;
+
+const REPEAT_INTERVAL_MS: Record<JobInterval, number> = {
+  [JobInterval.EVERY_MINUTE]: 60_000,
+  [JobInterval.EVERY_5_MINUTES]: 5 * 60_000,
+  [JobInterval.EVERY_15_MINUTES]: 15 * 60_000,
+  [JobInterval.EVERY_30_MINUTES]: 30 * 60_000,
+  [JobInterval.HOURLY]: 60 * 60_000,
+  [JobInterval.DAILY]: 24 * 60 * 60_000,
+  [JobInterval.WEEKLY]: 7 * 24 * 60 * 60_000,
+  [JobInterval.MONTHLY]: 30 * 24 * 60 * 60_000,
+};
+
+@Injectable()
+export class WorkerService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(WorkerService.name);
+  private timer?: ReturnType<typeof setTimeout>;
+
+  constructor(
+    private readonly heapFeeder: HeapFeederService,
+    @InjectRepository(Job)
+    private readonly jobsRepository: Repository<Job>,
+    private readonly jobLogger: JobLogger,
+    private readonly handlersRegistry: HandlersRegistry,
+    private readonly defaultHandler: DefaultJobHandler,
+  ) {}
+
+  onModuleInit(): void {
+    this.scheduleNext();
+  }
+
+  onModuleDestroy(): void {
+    if (this.timer) {
+      clearTimeout(this.timer);
+    }
+  }
+
+  async tick(): Promise<void> {
+    const job = await this.heapFeeder.popNextJob();
+
+    if (!job) {
+      return;
+    }
+
+    const claimed = await this.tryClaim(job);
+
+    if (!claimed) {
+      return;
+    }
+
+    await this.jobLogger.log(job.id, 'processing', 'Worker picked up job');
+
+    const depsMet = await this.checkDependencies(job);
+
+    if (!depsMet) {
+      await this.requeueForDependencies(job);
+      return;
+    }
+
+    try {
+      const handler =
+        this.handlersRegistry.get(job.type) ?? this.defaultHandler;
+
+      await handler.execute(job);
+      await this.handleSuccess(job);
+    } catch (err: unknown) {
+      await this.handleFailure(job, err);
+    }
+  }
+
+  private scheduleNext(): void {
+    this.timer = setTimeout(() => {
+      void this.tick().finally(() => {
+        this.scheduleNext();
+      });
+    }, WORKER_INTERVAL_MS);
+  }
+
+  private async tryClaim(job: Job): Promise<boolean> {
+    const result = await this.jobsRepository
+      .createQueryBuilder()
+      .update(Job)
+      .set({
+        status: JobStatus.PROCESSING,
+        startedAt: new Date(),
+      })
+      .where('id = :id', { id: job.id })
+      .andWhere('status = :status', { status: JobStatus.PENDING })
+      .execute();
+
+    return (result.affected ?? 0) > 0;
+  }
+
+  private async checkDependencies(job: Job): Promise<boolean> {
+    if (!job.dependencyIds || job.dependencyIds.length === 0) {
+      return true;
+    }
+
+    const deps = await this.jobsRepository.findBy({
+      id: In(job.dependencyIds),
+    });
+
+    return deps.every((d) => d.status === JobStatus.COMPLETED);
+  }
+
+  private async requeueForDependencies(job: Job): Promise<void> {
+    await this.jobsRepository.update(job.id, {
+      status: JobStatus.PENDING,
+      scheduledAt: new Date(Date.now() + DEPENDENCY_REQUEUE_DELAY_MS),
+      startedAt: null,
+    });
+    await this.jobLogger.log(
+      job.id,
+      'dependency_not_met',
+      `Re-queued with ${DEPENDENCY_REQUEUE_DELAY_MS}ms delay`,
+    );
+  }
+
+  private async handleSuccess(job: Job): Promise<void> {
+    await this.jobsRepository.update(job.id, {
+      status: JobStatus.COMPLETED,
+      completedAt: new Date(),
+    });
+    await this.jobLogger.log(job.id, 'completed', 'Job completed successfully');
+
+    if (job.interval) {
+      const nextScheduledAt = this.calculateNextSchedule(job.interval);
+
+      await this.jobsRepository.save({
+        type: job.type,
+        payload: job.payload,
+        priority: job.priority,
+        maxRetries: job.maxRetries,
+        interval: job.interval,
+        dependencyIds: job.dependencyIds,
+        scheduledAt: nextScheduledAt,
+        status: JobStatus.PENDING,
+        retryCount: 0,
+      });
+    }
+  }
+
+  private async handleFailure(job: Job, error: unknown): Promise<void> {
+    const newRetryCount = job.retryCount + 1;
+    const errMsg = error instanceof Error ? error.message : String(error);
+
+    if (newRetryCount >= job.maxRetries) {
+      await this.jobsRepository.update(job.id, {
+        status: JobStatus.FAILED,
+        errorMessage: errMsg,
+        inDlq: true,
+        retryCount: newRetryCount,
+      });
+      await this.jobLogger.log(
+        job.id,
+        'failed',
+        `Failed after ${newRetryCount} retries: ${errMsg}`,
+      );
+    } else {
+      const delayMs = this.calculateBackoff(newRetryCount);
+
+      await this.jobsRepository.update(job.id, {
+        status: JobStatus.PENDING,
+        startedAt: null,
+        scheduledAt: new Date(Date.now() + delayMs),
+        errorMessage: errMsg,
+        retryCount: newRetryCount,
+      });
+      await this.jobLogger.log(
+        job.id,
+        'retry_scheduled',
+        `Retry ${newRetryCount}/${job.maxRetries} in ${delayMs}ms: ${errMsg}`,
+      );
+    }
+  }
+
+  private calculateBackoff(retryCount: number): number {
+    const index = Math.min(retryCount - 1, BACKOFF_DELAYS_MS.length - 1);
+    const baseDelay = BACKOFF_DELAYS_MS[index];
+    const jitter =
+      1 - BACKOFF_JITTER_FACTOR + Math.random() * BACKOFF_JITTER_FACTOR * 2;
+
+    return Math.floor(baseDelay * jitter);
+  }
+
+  private calculateNextSchedule(interval: JobInterval): Date {
+    const ms = REPEAT_INTERVAL_MS[interval];
+
+    return new Date(Date.now() + ms);
+  }
+}
