@@ -6,6 +6,8 @@ import {
   Param,
   Patch,
   Delete,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,6 +16,8 @@ import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
+import { Observable } from 'rxjs';
+import { SseService } from '../common/sse/sse.service';
 import { JobsService } from './jobs.service';
 import { Job } from './entities/job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
@@ -22,7 +26,16 @@ import { UpdateJobDto } from './dto/update-job.dto';
 @ApiTags('jobs')
 @Controller('jobs')
 export class JobsController {
-  constructor(private readonly jobsService: JobsService) {}
+  constructor(
+    private readonly jobsService: JobsService,
+    private readonly sseService: SseService,
+  ) {}
+
+  @Sse('events')
+  @ApiOperation({ summary: 'Subscribe to job events via SSE' })
+  jobEvents(): Observable<MessageEvent> {
+    return this.sseService.events$;
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new job' })

@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { JobsModule } from './jobs/jobs.module';
 import { Env, validateEnv } from './config/env.validation';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { SseModule } from './common/sse/sse.module';
 import { WorkerModule } from './worker/worker.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { WorkerModule } from './worker/worker.module';
       }),
       inject: [ConfigService],
     }),
+    SseModule,
     JobsModule,
     SchedulerModule,
     WorkerModule,

@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
+import { SseService } from '../common/sse/sse.service';
 import { Job, JobStatus } from './entities/job.entity';
 import { JobsService } from './jobs.service';
 
@@ -24,15 +25,24 @@ const createRepository = (): MockRepository => ({
   findOne: jest.fn(),
   findOneBy: jest.fn(),
   save: jest.fn((job: Partial<Job>) =>
-    Promise.resolve({ id: 'job-1', ...job }),
+    Promise.resolve({ id: 'job-1', status: JobStatus.PENDING, ...job }),
   ),
   update: jest.fn(),
 });
 
+const mockSseService = { emit: jest.fn() };
+
 const createService = (repository: MockRepository): JobsService =>
-  new JobsService(repository as unknown as Repository<Job>);
+  new JobsService(
+    repository as unknown as Repository<Job>,
+    mockSseService as unknown as SseService,
+  );
 
 describe('JobsService', () => {
+  beforeEach(() => {
+    mockSseService.emit.mockClear();
+  });
+
   it('deduplicates and validates dependencies before creating a job', async () => {
     const repository = createRepository();
     repository.countBy.mockResolvedValue(1);
@@ -47,6 +57,12 @@ describe('JobsService', () => {
     expect(repository.create).toHaveBeenCalledWith({
       type: 'send_email',
       dependencyIds: ['dep-1'],
+    });
+    expect(mockSseService.emit).toHaveBeenCalledWith('job_created', {
+      jobId: 'job-1',
+      status: JobStatus.PENDING,
+      type: 'send_email',
+      priority: undefined,
     });
   });
 
@@ -145,7 +161,11 @@ describe('JobsService', () => {
     const repository = createRepository();
     repository.findOneBy
       .mockResolvedValueOnce({ id: 'dlq-1', inDlq: true })
-      .mockResolvedValueOnce({ id: 'dlq-1', inDlq: false, status: JobStatus.PENDING });
+      .mockResolvedValueOnce({
+        id: 'dlq-1',
+        inDlq: false,
+        status: JobStatus.PENDING,
+      });
     const service = createService(repository);
 
     const result = await service.retryFromDlq('dlq-1');
@@ -155,9 +175,30 @@ describe('JobsService', () => {
       inDlq: false,
       retryCount: 0,
       errorMessage: null,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       scheduledAt: expect.any(Date),
     });
     expect(result.inDlq).toBe(false);
+    expect(mockSseService.emit).toHaveBeenCalledWith('job_updated', {
+      jobId: 'dlq-1',
+      status: JobStatus.PENDING,
+    });
+  });
+
+  it('emits job_updated when cancelling a job', async () => {
+    const repository = createRepository();
+    repository.findOneBy.mockResolvedValue({
+      id: 'job-1',
+      status: JobStatus.PENDING,
+    });
+    const service = createService(repository);
+
+    await service.update('job-1', { status: JobStatus.CANCELLED });
+
+    expect(mockSseService.emit).toHaveBeenCalledWith('job_updated', {
+      jobId: 'job-1',
+      status: JobStatus.CANCELLED,
+    });
   });
 
   it('rejects retry when job is not in the DLQ', async () => {

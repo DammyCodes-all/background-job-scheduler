@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
+import { SseService } from '../common/sse/sse.service';
 import { Job, JobStatus } from './entities/job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
@@ -14,6 +15,7 @@ export class JobsService {
   constructor(
     @InjectRepository(Job)
     private jobsRepository: Repository<Job>,
+    private readonly sseService: SseService,
   ) {}
 
   async create(createJobDto: CreateJobDto): Promise<Job> {
@@ -25,7 +27,16 @@ export class JobsService {
       ...createJobDto,
       dependencyIds,
     });
-    return this.jobsRepository.save(job);
+    const saved = await this.jobsRepository.save(job);
+
+    this.sseService.emit('job_created', {
+      jobId: saved.id,
+      status: saved.status,
+      type: saved.type,
+      priority: saved.priority,
+    });
+
+    return saved;
   }
 
   findAll(): Promise<Job[]> {
@@ -49,6 +60,11 @@ export class JobsService {
       retryCount: 0,
       errorMessage: null as unknown as undefined,
       scheduledAt: new Date(),
+    });
+
+    this.sseService.emit('job_updated', {
+      jobId: id,
+      status: JobStatus.PENDING,
     });
 
     return this.findOne(id);
@@ -76,6 +92,13 @@ export class JobsService {
       ...updateJobDto,
       ...(dependencyIds === undefined ? {} : { dependencyIds }),
     });
+
+    if (updateJobDto.status === JobStatus.CANCELLED) {
+      this.sseService.emit('job_updated', {
+        jobId: id,
+        status: JobStatus.CANCELLED,
+      });
+    }
 
     return this.findOne(id);
   }
