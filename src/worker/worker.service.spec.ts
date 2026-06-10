@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+
 import { Repository } from 'typeorm';
 import { Job, JobInterval, JobStatus } from '../jobs/entities/job.entity';
 import { SseService } from '../common/sse/sse.service';
@@ -56,7 +58,7 @@ describe('WorkerService', () => {
 
     heapFeeder = {
       popNextJob: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<HeapFeederService>;
 
     jobsRepository = {
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
@@ -68,24 +70,24 @@ describe('WorkerService', () => {
 
     jobLogger = {
       log: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<JobLogger>;
 
     handlersRegistry = {
       get: jest.fn(),
       register: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<HandlersRegistry>;
 
     defaultHandler = {
       execute: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<DefaultJobHandler>;
 
     dlqAlertHandler = {
       execute: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<DlqAlertHandler>;
 
     sseService = {
       emit: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<SseService>;
 
     service = new WorkerService(
       heapFeeder,
@@ -139,6 +141,7 @@ describe('WorkerService', () => {
       );
       expect(jobsRepository.update).toHaveBeenCalledWith('job-deps', {
         status: JobStatus.PENDING,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         scheduledAt: expect.any(Date),
         startedAt: null,
       });
@@ -162,6 +165,7 @@ describe('WorkerService', () => {
       expect(handler.execute).toHaveBeenCalledWith(job);
       expect(jobsRepository.update).toHaveBeenCalledWith('job-success', {
         status: JobStatus.COMPLETED,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         completedAt: expect.any(Date),
       });
       expect(jobLogger.log).toHaveBeenCalledWith(
@@ -203,6 +207,7 @@ describe('WorkerService', () => {
 
       expect(jobsRepository.update).toHaveBeenCalledWith('job-recurring', {
         status: JobStatus.COMPLETED,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         completedAt: expect.any(Date),
       });
       expect(jobsRepository.save).toHaveBeenCalledWith({
@@ -257,6 +262,7 @@ describe('WorkerService', () => {
       expect(jobsRepository.update).toHaveBeenCalledWith('job-retry', {
         status: JobStatus.PENDING,
         startedAt: null,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         scheduledAt: expect.any(Date),
         errorMessage: 'oops',
         retryCount: 1,
@@ -335,6 +341,7 @@ describe('WorkerService', () => {
         payload: { dlqCount: 10 },
         priority: 0,
         status: JobStatus.PENDING,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         scheduledAt: expect.any(Date),
       });
       expect(jobLogger.log).toHaveBeenCalledWith(
@@ -365,7 +372,10 @@ describe('WorkerService', () => {
 
       const dlqAlertCalls = (
         jobsRepository.save as jest.Mock
-      ).mock.calls.filter((call: any[]) => call[0]?.type === 'dlq_alert');
+      ).mock.calls.filter(
+        (call: any[]) =>
+          (call[0] as Record<string, unknown>)?.type === 'dlq_alert',
+      );
 
       expect(dlqAlertCalls).toHaveLength(0);
       const dlqAlertEmits = (sseService.emit as jest.Mock).mock.calls.filter(
