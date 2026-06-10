@@ -115,12 +115,23 @@ body {
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+@custom-variant motion-reduce (@media (prefers-reduced-motion: reduce));
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
     }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
   *::-webkit-scrollbar {
     width: 6px;
     height: 6px;

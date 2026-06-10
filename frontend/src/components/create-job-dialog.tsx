@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type KeyboardEvent } from "react";
+import { useState, useRef, type KeyboardEvent } from "react";
 import {
   Sheet,
   SheetContent,
@@ -67,10 +67,6 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
   const depInputRef = useRef<HTMLInputElement>(null);
 
   const mutation = useCreateJobMutation();
-
-  useEffect(() => {
-    if (open) setSubmitError(null);
-  }, [open]);
 
   function validatePayload(val: string) {
     if (!val.trim()) {
@@ -148,7 +144,7 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(v) => { if (v) setSubmitError(null); onOpenChange(v); }}>
       <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
           <div className="flex items-center gap-2">

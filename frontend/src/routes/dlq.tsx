@@ -232,10 +232,15 @@ function DlqPage() {
             })}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={HEADERS.length} className="text-center py-8 text-muted-foreground">
-                  {search
-                    ? "No DLQ entries match the current search"
-                    : "No jobs in the dead letter queue"}
+                <TableCell colSpan={HEADERS.length} className="text-center py-12 text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2">
+                    <HugeiconsIcon icon={AlertTriangle} strokeWidth={1.5} className="size-8 text-muted-foreground/30" />
+                    <span className="text-xs">
+                      {search
+                        ? "No DLQ entries match the current search"
+                        : "No jobs in the dead letter queue"}
+                    </span>
+                  </div>
                 </TableCell>
               </TableRow>
             )}

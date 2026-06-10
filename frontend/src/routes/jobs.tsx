@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Delete01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, ClipboardListIcon, Delete01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -290,11 +290,16 @@ function JobsPage() {
               <TableRow>
                 <TableCell
                   colSpan={HEADERS.length}
-                  className="text-center py-8 text-muted-foreground"
+                  className="text-center py-12 text-muted-foreground"
                 >
-                  {search || statusFilter !== "all"
-                    ? "No jobs match the current filters"
-                    : "No jobs found"}
+                  <div className="flex flex-col items-center gap-2">
+                    <HugeiconsIcon icon={ClipboardListIcon} strokeWidth={1.5} className="size-8 text-muted-foreground/30" />
+                    <span className="text-xs">
+                      {search || statusFilter !== "all"
+                        ? "No jobs match the current filters"
+                        : "No jobs found"}
+                    </span>
+                  </div>
                 </TableCell>
               </TableRow>
             )}

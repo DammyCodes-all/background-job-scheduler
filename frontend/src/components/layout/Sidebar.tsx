@@ -24,7 +24,7 @@ const navItems = [
   { to: "/dlq" as const, label: "Dead Letter Queue", icon: AlertTriangle },
 ] as const;
 
-export function AppSidebar({ onCreateClick }: { onCreateClick: () => void }) {
+export function AppSidebar({ onCreateClick, isConnected }: { onCreateClick: () => void; isConnected: boolean }) {
   const location = useLocation();
 
   return (
@@ -62,11 +62,23 @@ export function AppSidebar({ onCreateClick }: { onCreateClick: () => void }) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-2">
+      <SidebarFooter className="border-t border-sidebar-border p-2 space-y-2">
         <Button onClick={onCreateClick} className="w-full gap-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0" size="sm">
           <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} className="size-3.5 shrink-0" />
           <span className="group-data-[collapsible=icon]:hidden">Create Job</span>
         </Button>
+        <div className="flex items-center gap-2 px-2 group-data-[collapsible=icon]:justify-center">
+          <span
+            className={`inline-block size-1.5 shrink-0 rounded-full motion-safe:transition-colors ${
+              isConnected
+                ? 'bg-status-completed motion-safe:animate-pulse'
+                : 'bg-muted-foreground/40'
+            }`}
+          />
+          <span className="text-[10px] font-mono text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
+            {isConnected ? 'connected' : 'disconnected'}
+          </span>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

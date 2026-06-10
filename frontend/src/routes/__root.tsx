@@ -26,20 +26,10 @@ function RootLayout() {
     <TooltipProvider delayDuration={400}>
     <SidebarProvider
       style={{ "--sidebar-width": "14rem" } as React.CSSProperties}>
-      <AppSidebar onCreateClick={() => setCreateOpen(true)} />
+      <AppSidebar onCreateClick={() => setCreateOpen(true)} isConnected={isConnected} />
       <SidebarInset className="min-w-0">
         <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-2">
           <SidebarTrigger className="size-7" />
-          <div className="ml-auto flex items-center gap-2">
-            <span
-              className={`inline-block size-1.5 rounded-full ${
-                isConnected ? 'bg-status-completed' : 'bg-status-failed'
-              }`}
-            />
-            <span className="text-[11px] font-mono text-muted-foreground tabular-nums">
-              {isConnected ? 'connected' : 'disconnected'}
-            </span>
-          </div>
         </header>
         <div className="min-h-0 flex-1">
           <Outlet />
