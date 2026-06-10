@@ -32,6 +32,28 @@ export class JobsService {
     return this.jobsRepository.find();
   }
 
+  findDlq(): Promise<Job[]> {
+    return this.jobsRepository.findBy({ inDlq: true });
+  }
+
+  async retryFromDlq(id: string): Promise<Job> {
+    const job = await this.findOne(id);
+
+    if (!job.inDlq) {
+      throw new BadRequestException('Job is not in the dead-letter queue');
+    }
+
+    await this.jobsRepository.update(id, {
+      status: JobStatus.PENDING,
+      inDlq: false,
+      retryCount: 0,
+      errorMessage: null as unknown as undefined,
+      scheduledAt: new Date(),
+    });
+
+    return this.findOne(id);
+  }
+
   async findOne(id: string): Promise<Job> {
     const job = await this.jobsRepository.findOneBy({ id });
 

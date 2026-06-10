@@ -8,6 +8,7 @@ type MockRepository = {
   create: jest.Mock;
   delete: jest.Mock;
   find: jest.Mock;
+  findBy: jest.Mock;
   findOne: jest.Mock;
   findOneBy: jest.Mock;
   save: jest.Mock;
@@ -19,6 +20,7 @@ const createRepository = (): MockRepository => ({
   create: jest.fn((job: Partial<Job>) => job),
   delete: jest.fn(),
   find: jest.fn(),
+  findBy: jest.fn(),
   findOne: jest.fn(),
   findOneBy: jest.fn(),
   save: jest.fn((job: Partial<Job>) =>
@@ -126,5 +128,46 @@ describe('JobsService', () => {
 
     await expect(service.remove('job-1')).resolves.toBeUndefined();
     expect(repository.delete).toHaveBeenCalledWith('job-1');
+  });
+
+  it('finds all DLQ jobs', async () => {
+    const repository = createRepository();
+    repository.findBy.mockResolvedValue([{ id: 'dlq-1', inDlq: true }]);
+    const service = createService(repository);
+
+    const result = await service.findDlq();
+
+    expect(repository.findBy).toHaveBeenCalledWith({ inDlq: true });
+    expect(result).toHaveLength(1);
+  });
+
+  it('retries a job from the DLQ', async () => {
+    const repository = createRepository();
+    repository.findOneBy
+      .mockResolvedValueOnce({ id: 'dlq-1', inDlq: true })
+      .mockResolvedValueOnce({ id: 'dlq-1', inDlq: false, status: JobStatus.PENDING });
+    const service = createService(repository);
+
+    const result = await service.retryFromDlq('dlq-1');
+
+    expect(repository.update).toHaveBeenCalledWith('dlq-1', {
+      status: JobStatus.PENDING,
+      inDlq: false,
+      retryCount: 0,
+      errorMessage: null,
+      scheduledAt: expect.any(Date),
+    });
+    expect(result.inDlq).toBe(false);
+  });
+
+  it('rejects retry when job is not in the DLQ', async () => {
+    const repository = createRepository();
+    repository.findOneBy.mockResolvedValue({ id: 'job-1', inDlq: false });
+    const service = createService(repository);
+
+    await expect(service.retryFromDlq('job-1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(repository.update).not.toHaveBeenCalled();
   });
 });

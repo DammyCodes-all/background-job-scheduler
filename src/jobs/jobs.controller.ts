@@ -46,6 +46,13 @@ export class JobsController {
     return this.jobsService.findAll();
   }
 
+  @Get('dlq')
+  @ApiOperation({ summary: 'List all jobs in the dead-letter queue' })
+  @ApiResponse({ status: 200, description: 'Return DLQ jobs.', type: [Job] })
+  findDlq() {
+    return this.jobsService.findDlq();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a job by id' })
   @ApiResponse({ status: 200, description: 'Return a single job.', type: Job })
@@ -80,5 +87,20 @@ export class JobsController {
   @ApiNotFoundResponse({ description: 'Job not found.' })
   remove(@Param('id') id: string) {
     return this.jobsService.remove(id);
+  }
+
+  @Post(':id/retry')
+  @ApiOperation({ summary: 'Retry a job from the dead-letter queue' })
+  @ApiResponse({
+    status: 200,
+    description: 'The job has been requeued.',
+    type: Job,
+  })
+  @ApiBadRequestResponse({
+    description: 'Job is not in the dead-letter queue.',
+  })
+  @ApiNotFoundResponse({ description: 'Job not found.' })
+  retry(@Param('id') id: string) {
+    return this.jobsService.retryFromDlq(id);
   }
 }
