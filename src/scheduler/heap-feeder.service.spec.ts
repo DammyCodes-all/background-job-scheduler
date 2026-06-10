@@ -11,6 +11,7 @@ import { JobPriorityHeap } from './job-priority-heap';
 type MockRepository = {
   createQueryBuilder: jest.Mock;
   find: jest.Mock;
+  findOneBy: jest.Mock;
 };
 
 type MockQueryBuilder = {
@@ -57,6 +58,7 @@ const createQueryBuilder = (): MockQueryBuilder => {
 const createRepository = (): MockRepository => ({
   createQueryBuilder: jest.fn(),
   find: jest.fn(),
+  findOneBy: jest.fn(),
 });
 
 const createService = (
@@ -136,10 +138,11 @@ describe('HeapFeederService', () => {
     const job = createJob({ id: 'job-1' });
 
     repository.find.mockResolvedValue([job]);
+    repository.findOneBy.mockResolvedValue(job);
 
     await service.feedHeapOnce();
 
-    expect(service.popNextJob()?.id).toBe('job-1');
+    await expect(service.popNextJob()).resolves.toBe(job);
     expect(service.getHeapSize()).toBe(0);
 
     await expect(service.feedHeapOnce()).resolves.toBe(1);

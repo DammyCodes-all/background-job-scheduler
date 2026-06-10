@@ -71,7 +71,12 @@ export class HeapFeederService implements OnModuleInit, OnModuleDestroy {
         continue;
       }
 
-      this.jobPriorityHeap.push(job);
+      this.jobPriorityHeap.push({
+        id: job.id,
+        priority: job.priority,
+        scheduledAt: job.scheduledAt,
+        createdAt: job.createdAt,
+      });
       this.inHeap.add(job.id);
       addedCount += 1;
     }
@@ -112,14 +117,18 @@ export class HeapFeederService implements OnModuleInit, OnModuleDestroy {
     return boostedCount;
   }
 
-  popNextJob(): Job | undefined {
-    const job = this.jobPriorityHeap.pop();
+  async popNextJob(): Promise<Job | undefined> {
+    const entry = this.jobPriorityHeap.pop();
 
-    if (job) {
-      this.inHeap.delete(job.id);
+    if (!entry) {
+      return undefined;
     }
 
-    return job;
+    this.inHeap.delete(entry.id);
+
+    const job = await this.jobsRepository.findOneBy({ id: entry.id });
+
+    return job ?? undefined;
   }
 
   markRemovedFromHeap(jobId: string): void {
