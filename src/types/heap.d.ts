@@ -7,6 +7,5 @@ declare module 'heap' {
     size(): number;
     empty(): boolean;
     clear(): void;
-    toArray(): T[];
   }
 }
