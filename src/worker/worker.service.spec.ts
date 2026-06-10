@@ -1,5 +1,6 @@
 import { Repository } from 'typeorm';
 import { Job, JobInterval, JobStatus } from '../jobs/entities/job.entity';
+import { SseService } from '../common/sse/sse.service';
 import { HeapFeederService } from '../scheduler/heap-feeder.service';
 import { DefaultJobHandler } from './default-job-handler';
 import { DlqAlertHandler } from './handlers/dlq-alert.handler';
@@ -24,7 +25,12 @@ const createJob = (overrides: Partial<Job> = {}): Job => ({
 
 describe('WorkerService', () => {
   let heapFeeder: jest.Mocked<HeapFeederService>;
-  let jobsRepository: jest.Mocked<Pick<Repository<Job>, 'createQueryBuilder' | 'update' | 'findBy' | 'save' | 'countBy'>>;
+  let jobsRepository: jest.Mocked<
+    Pick<
+      Repository<Job>,
+      'createQueryBuilder' | 'update' | 'findBy' | 'save' | 'countBy'
+    >
+  >;
   let queryBuilder: {
     update: jest.Mock;
     set: jest.Mock;
@@ -36,6 +42,7 @@ describe('WorkerService', () => {
   let handlersRegistry: jest.Mocked<HandlersRegistry>;
   let defaultHandler: jest.Mocked<DefaultJobHandler>;
   let dlqAlertHandler: jest.Mocked<DlqAlertHandler>;
+  let sseService: jest.Mocked<SseService>;
   let service: WorkerService;
 
   beforeEach(() => {
@@ -57,7 +64,7 @@ describe('WorkerService', () => {
       findBy: jest.fn(),
       save: jest.fn(),
       countBy: jest.fn(),
-    } as any;
+    };
 
     jobLogger = {
       log: jest.fn(),
@@ -76,6 +83,10 @@ describe('WorkerService', () => {
       execute: jest.fn(),
     } as any;
 
+    sseService = {
+      emit: jest.fn(),
+    } as any;
+
     service = new WorkerService(
       heapFeeder,
       jobsRepository as unknown as Repository<Job>,
@@ -83,6 +94,7 @@ describe('WorkerService', () => {
       handlersRegistry,
       defaultHandler,
       dlqAlertHandler,
+      sseService,
     );
   });
 
@@ -93,6 +105,7 @@ describe('WorkerService', () => {
       await service.tick();
 
       expect(jobsRepository.createQueryBuilder).not.toHaveBeenCalled();
+      expect(sseService.emit).not.toHaveBeenCalled();
     });
 
     it('does nothing when claim fails', async () => {
@@ -102,6 +115,7 @@ describe('WorkerService', () => {
       await service.tick();
 
       expect(jobLogger.log).not.toHaveBeenCalled();
+      expect(sseService.emit).not.toHaveBeenCalled();
     });
 
     it('re-queues job when dependencies are not met', async () => {
@@ -112,7 +126,7 @@ describe('WorkerService', () => {
 
       heapFeeder.popNextJob.mockResolvedValue(job);
       queryBuilder.execute.mockResolvedValue({ affected: 1 });
-      jobsRepository.findBy!.mockResolvedValue([
+      jobsRepository.findBy.mockResolvedValue([
         createJob({ id: 'dep-1', status: JobStatus.PENDING }),
       ]);
 
@@ -128,6 +142,11 @@ describe('WorkerService', () => {
         scheduledAt: expect.any(Date),
         startedAt: null,
       });
+      expect(sseService.emit).toHaveBeenCalledWith('job_updated', {
+        jobId: 'job-deps',
+        status: JobStatus.PROCESSING,
+      });
+      expect(sseService.emit).toHaveBeenCalledTimes(1);
     });
 
     it('completes a non-recurring job on success', async () => {
@@ -151,6 +170,15 @@ describe('WorkerService', () => {
         expect.any(String),
       );
       expect(jobsRepository.save).not.toHaveBeenCalled();
+      expect(sseService.emit).toHaveBeenCalledWith('job_updated', {
+        jobId: 'job-success',
+        status: JobStatus.PROCESSING,
+      });
+      expect(sseService.emit).toHaveBeenCalledWith('job_updated', {
+        jobId: 'job-success',
+        status: JobStatus.COMPLETED,
+      });
+      expect(sseService.emit).toHaveBeenCalledTimes(2);
     });
 
     it('creates next recurring job on completion', async () => {
@@ -165,6 +193,11 @@ describe('WorkerService', () => {
       heapFeeder.popNextJob.mockResolvedValue(job);
       queryBuilder.execute.mockResolvedValue({ affected: 1 });
       handlersRegistry.get.mockReturnValue(undefined);
+      jobsRepository.save.mockResolvedValue({
+        id: 'next-job',
+        status: JobStatus.PENDING,
+        type: 'test_job',
+      } as Job);
 
       await service.tick();
 
@@ -188,6 +221,20 @@ describe('WorkerService', () => {
         'completed',
         expect.any(String),
       );
+      expect(sseService.emit).toHaveBeenCalledWith('job_updated', {
+        jobId: 'job-recurring',
+        status: JobStatus.PROCESSING,
+      });
+      expect(sseService.emit).toHaveBeenCalledWith('job_updated', {
+        jobId: 'job-recurring',
+        status: JobStatus.COMPLETED,
+      });
+      expect(sseService.emit).toHaveBeenCalledWith('job_created', {
+        jobId: 'next-job',
+        status: JobStatus.PENDING,
+        type: 'test_job',
+      });
+      expect(sseService.emit).toHaveBeenCalledTimes(3);
     });
 
     it('schedules a retry with backoff when handler fails', async () => {
@@ -219,6 +266,16 @@ describe('WorkerService', () => {
         'retry_scheduled',
         expect.stringContaining('oops'),
       );
+      expect(sseService.emit).toHaveBeenCalledWith('job_updated', {
+        jobId: 'job-retry',
+        status: JobStatus.PROCESSING,
+      });
+      expect(sseService.emit).toHaveBeenCalledWith('job_updated', {
+        jobId: 'job-retry',
+        status: JobStatus.PENDING,
+        retryCount: 1,
+      });
+      expect(sseService.emit).toHaveBeenCalledTimes(2);
     });
 
     it('marks job as failed when max retries exceeded', async () => {
@@ -246,6 +303,15 @@ describe('WorkerService', () => {
         'failed',
         expect.stringContaining('final error'),
       );
+      expect(sseService.emit).toHaveBeenCalledWith('job_updated', {
+        jobId: 'job-failed',
+        status: JobStatus.PROCESSING,
+      });
+      expect(sseService.emit).toHaveBeenCalledWith('job_updated', {
+        jobId: 'job-failed',
+        status: JobStatus.FAILED,
+        inDlq: true,
+      });
     });
 
     it('creates a dlq_alert job when DLQ count hits the threshold', async () => {
@@ -259,7 +325,8 @@ describe('WorkerService', () => {
       queryBuilder.execute.mockResolvedValue({ affected: 1 });
       handlersRegistry.get.mockReturnValue(undefined);
       defaultHandler.execute.mockRejectedValue(new Error('fail'));
-      jobsRepository.countBy!.mockResolvedValue(10);
+      jobsRepository.countBy.mockResolvedValue(10);
+      jobsRepository.save.mockResolvedValue({ id: 'alert-1' } as Job);
 
       await service.tick();
 
@@ -275,6 +342,10 @@ describe('WorkerService', () => {
         'dlq_alert_triggered',
         expect.stringContaining('10'),
       );
+      expect(sseService.emit).toHaveBeenCalledWith('dlq_alert', {
+        dlqCount: 10,
+        alertJobId: 'alert-1',
+      });
     });
 
     it('does not create dlq_alert when DLQ count is below threshold', async () => {
@@ -288,15 +359,20 @@ describe('WorkerService', () => {
       queryBuilder.execute.mockResolvedValue({ affected: 1 });
       handlersRegistry.get.mockReturnValue(undefined);
       defaultHandler.execute.mockRejectedValue(new Error('fail'));
-      jobsRepository.countBy!.mockResolvedValue(5);
+      jobsRepository.countBy.mockResolvedValue(5);
 
       await service.tick();
 
-      const dlqAlertCalls = (jobsRepository.save as jest.Mock).mock.calls.filter(
-        (call: any[]) => call[0]?.type === 'dlq_alert',
-      );
+      const dlqAlertCalls = (
+        jobsRepository.save as jest.Mock
+      ).mock.calls.filter((call: any[]) => call[0]?.type === 'dlq_alert');
 
       expect(dlqAlertCalls).toHaveLength(0);
+      const dlqAlertEmits = (sseService.emit as jest.Mock).mock.calls.filter(
+        (call: any[]) => call[0] === 'dlq_alert',
+      );
+
+      expect(dlqAlertEmits).toHaveLength(0);
     });
   });
 });

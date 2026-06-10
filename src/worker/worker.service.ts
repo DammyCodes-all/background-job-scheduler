@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import { SseService } from '../common/sse/sse.service';
 import { Job, JobInterval, JobStatus } from '../jobs/entities/job.entity';
 import { HeapFeederService } from '../scheduler/heap-feeder.service';
 import {
@@ -34,6 +35,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly handlersRegistry: HandlersRegistry,
     private readonly defaultHandler: DefaultJobHandler,
     private readonly dlqAlertHandler: DlqAlertHandler,
+    private readonly sseService: SseService,
   ) {}
 
   onModuleInit(): void {
@@ -60,6 +62,10 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    this.sseService.emit('job_updated', {
+      jobId: job.id,
+      status: JobStatus.PROCESSING,
+    });
     await this.jobLogger.log(job.id, 'processing', 'Worker picked up job');
 
     const depsMet = await this.checkDependencies(job);
@@ -133,12 +139,16 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       status: JobStatus.COMPLETED,
       completedAt: new Date(),
     });
+    this.sseService.emit('job_updated', {
+      jobId: job.id,
+      status: JobStatus.COMPLETED,
+    });
     await this.jobLogger.log(job.id, 'completed', 'Job completed successfully');
 
     if (job.interval) {
       const nextScheduledAt = this.calculateNextSchedule(job.interval);
 
-      await this.jobsRepository.save({
+      const nextJob = await this.jobsRepository.save({
         type: job.type,
         payload: job.payload,
         priority: job.priority,
@@ -148,6 +158,12 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         scheduledAt: nextScheduledAt,
         status: JobStatus.PENDING,
         retryCount: 0,
+      });
+
+      this.sseService.emit('job_created', {
+        jobId: nextJob.id,
+        status: nextJob.status,
+        type: nextJob.type,
       });
     }
   }
@@ -163,6 +179,11 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         inDlq: true,
         retryCount: newRetryCount,
       });
+      this.sseService.emit('job_updated', {
+        jobId: job.id,
+        status: JobStatus.FAILED,
+        inDlq: true,
+      });
       await this.jobLogger.log(
         job.id,
         'failed',
@@ -172,12 +193,16 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       const dlqCount = await this.jobsRepository.countBy({ inDlq: true });
 
       if (dlqCount === DLQ_THRESHOLD) {
-        await this.jobsRepository.save({
+        const alertJob = await this.jobsRepository.save({
           type: 'dlq_alert',
           payload: { dlqCount },
           priority: 0,
           status: JobStatus.PENDING,
           scheduledAt: new Date(),
+        });
+        this.sseService.emit('dlq_alert', {
+          dlqCount,
+          alertJobId: alertJob.id,
         });
         await this.jobLogger.log(
           job.id,
@@ -193,6 +218,11 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         startedAt: null,
         scheduledAt: new Date(Date.now() + delayMs),
         errorMessage: errMsg,
+        retryCount: newRetryCount,
+      });
+      this.sseService.emit('job_updated', {
+        jobId: job.id,
+        status: JobStatus.PENDING,
         retryCount: newRetryCount,
       });
       await this.jobLogger.log(
