@@ -32,6 +32,13 @@
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 12px;
+
+  --animate-row-flash: row-flash 2s ease-out forwards;
+}
+
+@keyframes row-flash {
+  0%, 30% { background-color: var(--color-accent-subtle); }
+  100% { background-color: transparent; }
 }
 
 body {

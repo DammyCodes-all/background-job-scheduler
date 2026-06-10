@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { CreateJobDialog } from '@/components/create-job-dialog'
 import { useJobStream } from '@/hooks/useJobStream'
 import { useJobStore } from '@/stores/jobStore'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -17,6 +18,7 @@ function RootLayout() {
   useJobStream()
 
   return (
+    <TooltipProvider delayDuration={400}>
     <div className="flex h-dvh overflow-hidden">
       <Sidebar onCreateClick={() => setCreateOpen(true)} />
       <main className="flex flex-1 flex-col overflow-y-auto bg-bg-base">
@@ -36,5 +38,6 @@ function RootLayout() {
       </main>
       <CreateJobDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
+    </TooltipProvider>
   )
 }
