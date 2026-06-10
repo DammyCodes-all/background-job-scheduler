@@ -11,7 +11,8 @@ export function useJobStream(onEvent?: SseCallback) {
     const onEventRef = { current: onEvent }
     onEventRef.current = onEvent
 
-    const es = new EventSource('/jobs/events')
+    const baseUrl = import.meta.env.VITE_API_URL ?? ''
+    const es = new EventSource(`${baseUrl}/jobs/events`)
 
     es.onopen = () => setConnected(true)
 
