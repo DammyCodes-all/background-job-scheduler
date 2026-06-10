@@ -6,7 +6,10 @@ export class SseService {
   private subject = new Subject<MessageEvent>();
 
   emit(event: string, data: Record<string, unknown>): void {
-    this.subject.next({ data: JSON.stringify(data), event } as MessageEvent);
+    this.subject.next({
+      data: JSON.stringify(data),
+      type: event,
+    });
   }
 
   get events$(): Observable<MessageEvent> {
