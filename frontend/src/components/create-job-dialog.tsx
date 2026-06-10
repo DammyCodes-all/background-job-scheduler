@@ -1,4 +1,4 @@
-import { useState, useRef, type KeyboardEvent } from "react";
+import { useState, useRef, useEffect, type KeyboardEvent } from "react";
 import {
   Sheet,
   SheetContent,
@@ -25,6 +25,7 @@ import {
   LinkIcon,
   Cancel01Icon,
 } from "@hugeicons/core-free-icons";
+import CodeEditor from "@uiw/react-textarea-code-editor";
 import { cn } from "@/lib/utils";
 import { useCreateJobMutation } from "@/hooks/useJobQueries";
 import type { JobInterval } from "@/lib/api";
@@ -62,9 +63,14 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
   const [payloadError, setPayloadError] = useState<string | null>(null);
   const [depIds, setDepIds] = useState<string[]>([]);
   const [depInput, setDepInput] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const depInputRef = useRef<HTMLInputElement>(null);
 
   const mutation = useCreateJobMutation();
+
+  useEffect(() => {
+    if (open) setSubmitError(null);
+  }, [open]);
 
   function validatePayload(val: string) {
     if (!val.trim()) {
@@ -113,20 +119,20 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
       }
     }
 
-    await mutation.mutateAsync({
-      type: type.trim(),
-      priority: Number(priority),
-      maxRetries: Number(maxRetries),
-      scheduledAt: scheduledAt
-        ? new Date(scheduledAt).toISOString()
-        : undefined,
-      interval:
-        intervalVal === "none"
-          ? undefined
-          : (intervalVal as JobInterval),
-      payload: payload ? JSON.parse(payload) : undefined,
-      dependency_ids: depIds.length > 0 ? depIds : undefined,
-    });
+    try {
+      await mutation.mutateAsync({
+        type: type.trim(),
+        priority: Number(priority),
+        maxRetries: Number(maxRetries),
+        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        interval: intervalVal === "none" ? undefined : (intervalVal as JobInterval),
+        payload: payload ? JSON.parse(payload) : undefined,
+        dependency_ids: depIds.length > 0 ? depIds : undefined,
+      });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Failed to create job");
+      return;
+    }
 
     setType("");
     setPriority("3");
@@ -137,23 +143,17 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
     setPayloadError(null);
     setDepIds([]);
     setDepInput("");
+    setSubmitError(null);
     onOpenChange(false);
   }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-md p-0 flex flex-col"
-      >
+      <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
-              <HugeiconsIcon
-                icon={FlowIcon}
-                strokeWidth={1.5}
-                className="size-4 text-primary"
-              />
+              <HugeiconsIcon icon={FlowIcon} strokeWidth={2.5} className="size-4 text-primary" />
             </div>
             <div>
               <SheetTitle>Create Job</SheetTitle>
@@ -163,12 +163,12 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-          { /* Job Details */ }
+          {/* Job Details */}
           <div className="space-y-3">
             <div className="flex items-center gap-1.5">
               <HugeiconsIcon
                 icon={FlowIcon}
-                strokeWidth={1.5}
+                strokeWidth={2.5}
                 className="size-3.5 text-muted-foreground"
               />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -203,7 +203,7 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
                         "flex-1 px-3 py-1.5 text-xs font-medium transition-colors",
                         i > 0 && "border-l border-border",
                         active
-                          ? "bg-accent text-white"
+                          ? "bg-chart-2/80 font-semibold text-white"
                           : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
                       )}
                     >
@@ -211,7 +211,7 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
                       <span
                         className={cn(
                           "ml-1.5 text-[10px]",
-                          active ? "text-white/60" : "text-muted-foreground",
+                          active ? "text-white/90" : "text-muted-foreground",
                         )}
                       >
                         {opt.desc}
@@ -235,18 +235,16 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
                 onChange={(e) => setMaxRetries(e.target.value)}
                 className="h-8"
               />
-              <p className="text-[10px] text-muted-foreground">
-                Before moving to DLQ
-              </p>
+              <p className="text-[10px] text-muted-foreground">Before moving to DLQ</p>
             </div>
           </div>
 
-          { /* Schedule */ }
+          {/* Schedule */}
           <div className="space-y-3">
             <div className="flex items-center gap-1.5">
               <HugeiconsIcon
                 icon={ClockIcon}
-                strokeWidth={1.5}
+                strokeWidth={2.5}
                 className="size-3.5 text-muted-foreground"
               />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -289,12 +287,12 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
             </div>
           </div>
 
-          { /* Dependencies */ }
+          {/* Dependencies */}
           <div className="space-y-3">
             <div className="flex items-center gap-1.5">
               <HugeiconsIcon
                 icon={LinkIcon}
-                strokeWidth={1.5}
+                strokeWidth={2.5}
                 className="size-3.5 text-muted-foreground"
               />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -323,11 +321,7 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
                       onClick={() => removeDepId(id)}
                       className="text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <HugeiconsIcon
-                        icon={Cancel01Icon}
-                        strokeWidth={2}
-                        className="size-3"
-                      />
+                      <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
                     </button>
                   </span>
                 ))}
@@ -336,9 +330,7 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
                   value={depInput}
                   onChange={(e) => setDepInput(e.target.value)}
                   onKeyDown={handleDepKeyDown}
-                  placeholder={
-                    depIds.length === 0 ? "Type ID and press Enter\u2026" : ""
-                  }
+                  placeholder={depIds.length === 0 ? "Type ID and press Enter\u2026" : ""}
                   className="min-w-[80px] flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
                 />
               </div>
@@ -348,12 +340,12 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
             </div>
           </div>
 
-          { /* Payload */ }
+          {/* Payload */}
           <div className="space-y-3">
             <div className="flex items-center gap-1.5">
               <HugeiconsIcon
                 icon={FileCodeIcon}
-                strokeWidth={1.5}
+                strokeWidth={2.5}
                 className="size-3.5 text-muted-foreground"
               />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -364,25 +356,33 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
               <Label htmlFor="payload" className="text-xs font-medium">
                 JSON Payload
               </Label>
-              <textarea
-                id="payload"
-                placeholder='{ "key": "value" }'
-                value={payload}
-                onChange={(e) => setPayload(e.target.value)}
-                onBlur={() => validatePayload(payload)}
-                rows={5}
+              <div
                 className={cn(
-                  "h-24 w-full min-w-0 rounded-md bg-muted px-2.5 py-2 text-xs font-mono transition-colors outline-none resize-y",
-                  "placeholder:text-muted-foreground focus-visible:ring-2",
+                  "rounded-md border overflow-hidden transition-colors focus-within:ring-2",
                   payloadError
-                    ? "border border-status-failed/50 focus-visible:ring-status-failed/30"
-                    : "border border-border focus-visible:ring-ring/30",
+                    ? "border-status-failed/50 focus-within:ring-status-failed/30"
+                    : "border-border focus-within:ring-ring/30",
                 )}
-              />
+              >
+                <CodeEditor
+                  value={payload}
+                  language="json"
+                  placeholder='{ "key": "value" }'
+                  onChange={(e) => setPayload(e.target.value)}
+                  onBlur={() => validatePayload(payload)}
+                  data-color-mode="dark"
+                  padding={10}
+                  minHeight={96}
+                  style={{
+                    fontSize: 12,
+                    fontFamily:
+                      "ui-monospace,SFMono-Regular,SF Mono,Consolas,Liberation Mono,Menlo,monospace",
+                    backgroundColor: "var(--color-muted)",
+                  }}
+                />
+              </div>
               {payloadError ? (
-                <p className="text-[10px] text-status-failed">
-                  {payloadError}
-                </p>
+                <p className="text-[10px] text-status-failed">{payloadError}</p>
               ) : (
                 <p className="text-[10px] text-muted-foreground">
                   Optional JSON data passed to the job handler
@@ -392,13 +392,14 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
           </div>
         </div>
 
+        {submitError && (
+          <div className="px-6 py-2 bg-status-failed/10 border-t border-status-failed/20">
+            <p className="text-[11px] text-status-failed">{submitError}</p>
+          </div>
+        )}
         <SheetFooter className="px-6 py-4 border-t border-border mt-auto">
           <div className="flex w-full gap-2">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="flex-1"
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancel
             </Button>
             <Button

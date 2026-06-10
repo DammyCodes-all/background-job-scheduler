@@ -73,9 +73,9 @@ const HEADERS = [
   "Interval",
   "Started",
   "Completed",
-  "Actions",
   "Created",
   "Scheduled",
+  "Actions",
 ];
 
 function DateCell({ date }: { date: string | null }) {
@@ -208,7 +208,7 @@ function JobsPage() {
           <TableHeader>
             <TableRow>
               {HEADERS.map((h) => (
-                <TableHead key={h} className={cn(TH, h === "Actions" && "w-24")}>
+                <TableHead key={h} className={cn(TH, h === "Actions" && "w-28")}>
                   {h}
                 </TableHead>
               ))}
@@ -244,36 +244,6 @@ function JobsPage() {
                 <TableCell className="text-xs text-muted-foreground">
                   {intervalLabel(job.interval)}
                 </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    {job.status === "pending" && (
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => cancelJob.mutate(job.id)}
-                        title="Cancel"
-                        className="cursor-pointer"
-                      >
-                        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
-                      </Button>
-                    )}
-                    {job.status !== "processing" && (
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        className="cursor-pointer"
-                        onClick={() => deleteJob.mutate(job.id)}
-                        title="Delete"
-                      >
-                        <HugeiconsIcon
-                          icon={Delete01Icon}
-                          strokeWidth={2}
-                          className="size-3 text-status-failed"
-                        />
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
                 <TableCell className="font-mono text-xs tabular-nums whitespace-nowrap text-muted-foreground">
                   <DateCell date={job.startedAt} />
                 </TableCell>
@@ -285,6 +255,34 @@ function JobsPage() {
                 </TableCell>
                 <TableCell className="font-mono text-xs tabular-nums whitespace-nowrap text-muted-foreground">
                   <DateCell date={job.scheduledAt} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1.5">
+                    {job.status === "pending" && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => cancelJob.mutate(job.id)}
+                        title="Cancel"
+                      >
+                        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3.5" />
+                      </Button>
+                    )}
+                    {job.status !== "processing" && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => deleteJob.mutate(job.id)}
+                        title="Delete"
+                      >
+                        <HugeiconsIcon
+                          icon={Delete01Icon}
+                          strokeWidth={2}
+                          className="size-3.5 text-status-failed"
+                        />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
