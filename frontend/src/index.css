@@ -21,7 +21,7 @@
 @keyframes row-flash {
     0%,
     30% {
-        background-color: var(--color-accent-subtle);
+        background-color: oklch(0.85 0.2 85 / 0.35);
     }
     100% {
         background-color: transparent;
