@@ -145,7 +145,7 @@ function JobsPage() {
             className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-text-muted"
           />
           <Input
-            placeholder="Search by type\u2026"
+            placeholder={'Search by type\u2026'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-7 pl-7"
@@ -163,10 +163,10 @@ function JobsPage() {
               <TableHead className="text-[11px] font-medium uppercase tracking-[0.1em] text-text-muted">Status</TableHead>
               <TableHead className="text-[11px] font-medium uppercase tracking-[0.1em] text-text-muted">Retries</TableHead>
               <TableHead className="text-[11px] font-medium uppercase tracking-[0.1em] text-text-muted">Interval</TableHead>
+              <TableHead className="text-[11px] font-medium uppercase tracking-[0.1em] text-text-muted">Created</TableHead>
               <TableHead className="text-[11px] font-medium uppercase tracking-[0.1em] text-text-muted">Scheduled</TableHead>
               <TableHead className="text-[11px] font-medium uppercase tracking-[0.1em] text-text-muted">Started</TableHead>
               <TableHead className="text-[11px] font-medium uppercase tracking-[0.1em] text-text-muted">Completed</TableHead>
-              <TableHead className="text-[11px] font-medium uppercase tracking-[0.1em] text-text-muted">Created</TableHead>
               <TableHead className="w-24 text-[11px] font-medium uppercase tracking-[0.1em] text-text-muted">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -183,7 +183,7 @@ function JobsPage() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="font-mono text-[11px] text-text-muted cursor-default">
-                        {job.id.slice(0, 8)}\u2026
+                        {job.id.slice(0, 8)}{'\u2026'}
                       </span>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" align="start">
@@ -210,6 +210,16 @@ function JobsPage() {
                 <TableCell className="text-xs text-text-secondary">
                   {intervalLabel(job.interval)}
                 </TableCell>
+                <TableCell className="font-mono text-xs tabular-nums text-text-muted whitespace-nowrap">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-default">{relTime(job.createdAt)}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="start">
+                      {fmtExact(job.createdAt)}
+                    </TooltipContent>
+                  </Tooltip>
+                </TableCell>
                 <TableCell className="font-mono text-xs tabular-nums text-text-secondary whitespace-nowrap">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -231,7 +241,7 @@ function JobsPage() {
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    <span className="text-text-muted">\u2014</span>
+                    <span className="text-text-muted">{'\u2014'}</span>
                   )}
                 </TableCell>
                 <TableCell className="font-mono text-xs tabular-nums whitespace-nowrap">
@@ -245,18 +255,8 @@ function JobsPage() {
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    <span className="text-text-muted">\u2014</span>
+                    <span className="text-text-muted">{'\u2014'}</span>
                   )}
-                </TableCell>
-                <TableCell className="font-mono text-xs tabular-nums text-text-muted whitespace-nowrap">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="cursor-default">{relTime(job.createdAt)}</span>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" align="start">
-                      {fmtExact(job.createdAt)}
-                    </TooltipContent>
-                  </Tooltip>
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">

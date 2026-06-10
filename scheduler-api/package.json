@@ -22,7 +22,8 @@
     "migration:create": "typeorm migration:create",
     "migration:generate": "pnpm typeorm migration:generate -d database/data-source.ts",
     "migration:run": "pnpm typeorm migration:run -d database/data-source.ts",
-    "migration:revert": "pnpm typeorm migration:revert -d database/data-source.ts"
+    "migration:revert": "pnpm typeorm migration:revert -d database/data-source.ts",
+    "db:clear": "ts-node database/clear.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
