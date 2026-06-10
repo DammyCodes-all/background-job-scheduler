@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import Heap from 'heap';
-import { Job } from '../jobs/entities/job.entity';
+
+export interface HeapEntry {
+  id: string;
+  priority: number;
+  scheduledAt: Date;
+  createdAt: Date;
+}
 
 @Injectable()
 export class JobPriorityHeap {
-  private readonly heap = new Heap<Job>((left, right) => {
+  private readonly heap = new Heap<HeapEntry>((left, right) => {
     const priorityDiff = left.priority - right.priority;
 
     if (priorityDiff !== 0) {
@@ -21,15 +27,15 @@ export class JobPriorityHeap {
     return left.createdAt.getTime() - right.createdAt.getTime();
   });
 
-  push(job: Job): void {
-    this.heap.push(job);
+  push(entry: HeapEntry): void {
+    this.heap.push(entry);
   }
 
-  pop(): Job | undefined {
+  pop(): HeapEntry | undefined {
     return this.heap.pop();
   }
 
-  peek(): Job | undefined {
+  peek(): HeapEntry | undefined {
     return this.heap.peek();
   }
 
