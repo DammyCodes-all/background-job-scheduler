@@ -55,7 +55,33 @@ export function useDeleteJobMutation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.deleteJob(id),
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: jobKeys.all })
+      const previousQueries = new Map<string, unknown>()
+      for (const page of [1, 2, 3, 4, 5]) {
+        const key = jobKeys.list(page)
+        const prev = queryClient.getQueryData(key)
+        if (prev) {
+          previousQueries.set(JSON.stringify(key), prev)
+          queryClient.setQueryData(key, {
+            ...(prev as Record<string, unknown>),
+            data: ((prev as { data: unknown[] }).data ?? []).filter(
+              (job: { id: string }) => job.id !== id,
+            ),
+            total: Math.max(0, ((prev as { total: number }).total ?? 0) - 1),
+          })
+        }
+      }
+      return { previousQueries }
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousQueries) {
+        for (const [key, data] of context.previousQueries) {
+          queryClient.setQueryData(JSON.parse(key), data)
+        }
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: jobKeys.all })
     },
   })

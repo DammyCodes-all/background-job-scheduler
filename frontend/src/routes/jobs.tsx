@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
@@ -112,6 +122,7 @@ function JobsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
   const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const flashingIds = useJobStore((s) => s.flashingIds);
   const { data, isLoading } = useJobsQuery(page);
@@ -145,6 +156,7 @@ function JobsPage() {
   }
 
   return (
+    <>
     <div className="size-full space-y-4 p-6">
       <div className="flex items-center justify-between">
         <div>
@@ -272,7 +284,7 @@ function JobsPage() {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => deleteJob.mutate(job.id)}
+                        onClick={() => setDeletingId(job.id)}
                         title="Delete"
                       >
                         <HugeiconsIcon
@@ -307,5 +319,27 @@ function JobsPage() {
         </Table>
       </div>
     </div>
+      <AlertDialog open={!!deletingId} onOpenChange={(v) => { if (!v) setDeletingId(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete job</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this job? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletingId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingId) deleteJob.mutate(deletingId)
+                setDeletingId(null)
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
