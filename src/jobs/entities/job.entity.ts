@@ -133,7 +133,7 @@ export class Job {
     description: 'When worker picked it up. Useful for detecting stuck jobs',
   })
   @Column({ type: 'timestamptz', nullable: true })
-  startedAt?: Date;
+  startedAt: Date | null;
 
   @ApiProperty({
     description: 'When it finished. Dashboard metrics, audit trail',

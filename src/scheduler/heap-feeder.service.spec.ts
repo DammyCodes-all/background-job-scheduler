@@ -33,6 +33,7 @@ const createJob = (overrides: Partial<Job>): Job => {
     scheduledAt: new Date('2026-06-09T10:00:00.000Z'),
     dependencyIds: [],
     inDlq: false,
+    startedAt: null,
     createdAt: new Date('2026-06-09T10:00:00.000Z'),
     ...overrides,
   };

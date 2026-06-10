@@ -6,5 +6,7 @@ declare module 'heap' {
     peek(): T | undefined;
     size(): number;
     empty(): boolean;
+    clear(): void;
+    toArray(): T[];
   }
 }

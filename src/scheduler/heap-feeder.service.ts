@@ -133,6 +133,7 @@ export class HeapFeederService implements OnModuleInit, OnModuleDestroy {
 
   markRemovedFromHeap(jobId: string): void {
     this.inHeap.delete(jobId);
+    this.jobPriorityHeap.remove(jobId);
   }
 
   getHeapSize(): number {

@@ -48,8 +48,23 @@ export class JobPriorityHeap {
   }
 
   clear(): void {
-    while (!this.heap.empty()) {
-      this.heap.pop();
+    this.heap.clear();
+  }
+
+  remove(jobId: string): boolean {
+    const entries = this.heap.toArray();
+    const filtered = entries.filter((e) => e.id !== jobId);
+
+    if (filtered.length === entries.length) {
+      return false;
     }
+
+    this.heap.clear();
+
+    for (const entry of filtered) {
+      this.heap.push(entry);
+    }
+
+    return true;
   }
 }
