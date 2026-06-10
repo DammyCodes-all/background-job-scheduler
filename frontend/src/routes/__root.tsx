@@ -1,11 +1,16 @@
 /* eslint-disable react-refresh/only-export-components */
 import { Outlet, createRootRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Sidebar } from '@/components/layout/Sidebar'
+import { AppSidebar } from '@/components/layout/Sidebar'
 import { CreateJobDialog } from '@/components/create-job-dialog'
 import { useJobStream } from '@/hooks/useJobStream'
 import { useJobStore } from '@/stores/jobStore'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -19,25 +24,29 @@ function RootLayout() {
 
   return (
     <TooltipProvider delayDuration={400}>
-    <div className="flex h-dvh overflow-hidden">
-      <Sidebar onCreateClick={() => setCreateOpen(true)} />
-      <main className="flex flex-1 flex-col overflow-y-auto bg-bg-base">
-        <header className="flex h-9 shrink-0 items-center justify-end gap-2 border-b border-border-base px-4">
-          <span
-            className={`inline-block size-1.5 rounded-full ${
-              isConnected ? 'bg-status-completed' : 'bg-status-failed'
-            }`}
-          />
-          <span className="text-[11px] font-mono text-text-muted tabular-nums">
-            {isConnected ? 'connected' : 'disconnected'}
-          </span>
+    <SidebarProvider
+      style={{ "--sidebar-width": "14rem" } as React.CSSProperties}>
+      <AppSidebar onCreateClick={() => setCreateOpen(true)} />
+      <SidebarInset className="min-w-0">
+        <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-2">
+          <SidebarTrigger className="size-7" />
+          <div className="ml-auto flex items-center gap-2">
+            <span
+              className={`inline-block size-1.5 rounded-full ${
+                isConnected ? 'bg-status-completed' : 'bg-status-failed'
+              }`}
+            />
+            <span className="text-[11px] font-mono text-muted-foreground tabular-nums">
+              {isConnected ? 'connected' : 'disconnected'}
+            </span>
+          </div>
         </header>
-        <div className="flex-1">
+        <div className="min-h-0 flex-1">
           <Outlet />
         </div>
-      </main>
+      </SidebarInset>
       <CreateJobDialog open={createOpen} onOpenChange={setCreateOpen} />
-    </div>
+    </SidebarProvider>
     </TooltipProvider>
   )
 }

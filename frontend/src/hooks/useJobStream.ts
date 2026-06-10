@@ -56,6 +56,7 @@ export function useJobStream(onEvent?: SseCallback) {
     })
 
     handleEvent('dlq_alert', (data) => {
+      flash(data.alertJobId)
       onEventRef.current?.('dlq_alert', data)
       queryClient.refetchQueries({ queryKey: ['jobs'] })
     })

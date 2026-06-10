@@ -14,7 +14,7 @@ const toggleVariants = cva(
         outline:
           "rounded-3xl border border-input bg-transparent hover:bg-muted",
         filter:
-          "rounded-md bg-bg-subtle text-text-secondary hover:bg-bg-elevated hover:text-text-primary data-[state=on]:bg-accent data-[state=on]:text-white",
+          "rounded-md bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
       },
       size: {
         default:
