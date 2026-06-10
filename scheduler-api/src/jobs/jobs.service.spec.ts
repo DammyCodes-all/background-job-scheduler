@@ -9,6 +9,7 @@ type MockRepository = {
   create: jest.Mock;
   delete: jest.Mock;
   find: jest.Mock;
+  findAndCount: jest.Mock;
   findBy: jest.Mock;
   findOne: jest.Mock;
   findOneBy: jest.Mock;
@@ -21,6 +22,7 @@ const createRepository = (): MockRepository => ({
   create: jest.fn((job: Partial<Job>) => job),
   delete: jest.fn(),
   find: jest.fn(),
+  findAndCount: jest.fn(),
   findBy: jest.fn(),
   findOne: jest.fn(),
   findOneBy: jest.fn(),
@@ -146,15 +148,46 @@ describe('JobsService', () => {
     expect(repository.delete).toHaveBeenCalledWith('job-1');
   });
 
-  it('finds all DLQ jobs', async () => {
+  it('returns paginated jobs', async () => {
     const repository = createRepository();
-    repository.findBy.mockResolvedValue([{ id: 'dlq-1', inDlq: true }]);
+    repository.findAndCount.mockResolvedValue([
+      [{ id: 'job-1' }, { id: 'job-2' }],
+      10,
+    ]);
     const service = createService(repository);
 
-    const result = await service.findDlq();
+    const result = await service.findAll({ page: 2, limit: 2 });
 
-    expect(repository.findBy).toHaveBeenCalledWith({ inDlq: true });
-    expect(result).toHaveLength(1);
+    expect(repository.findAndCount).toHaveBeenCalledWith({
+      skip: 2,
+      take: 2,
+      order: { createdAt: 'DESC' },
+    });
+    expect(result.data).toHaveLength(2);
+    expect(result.total).toBe(10);
+    expect(result.page).toBe(2);
+    expect(result.limit).toBe(2);
+    expect(result.totalPages).toBe(5);
+  });
+
+  it('returns paginated DLQ jobs', async () => {
+    const repository = createRepository();
+    repository.findAndCount.mockResolvedValue([
+      [{ id: 'dlq-1', inDlq: true }],
+      1,
+    ]);
+    const service = createService(repository);
+
+    const result = await service.findDlq({ page: 1, limit: 20 });
+
+    expect(repository.findAndCount).toHaveBeenCalledWith({
+      where: { inDlq: true },
+      skip: 0,
+      take: 20,
+      order: { createdAt: 'DESC' },
+    });
+    expect(result.data).toHaveLength(1);
+    expect(result.total).toBe(1);
   });
 
   it('retries a job from the DLQ', async () => {

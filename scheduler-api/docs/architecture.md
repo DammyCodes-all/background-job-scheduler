@@ -394,7 +394,7 @@ RxJS's `Observable` contract handles cleanup. When the client disconnects, NestJ
 |---|---|---|
 | `job_created` | `{ jobId, status, type, priority }` | After `POST /jobs` saves the new row, and when a recurring job spawns its next execution |
 | `job_updated` | `{ jobId, status }` + optionally `retryCount`, `inDlq` | Worker claims job -> `processing`; success -> `completed`; failure -> `failed` + `inDlq: true`; retry -> `pending` + `retryCount`; cancel -> `cancelled`; manual DLQ retry -> `pending` |
-| `dlq_alert` | `{ dlqCount, alertJobId }` | When a job enters the DLQ and the total DLQ count reaches exactly 10 |
+| `dlq_alert` | `{ dlqCount, alertJobId }` | When a job enters the DLQ, the total DLQ count is >= 10, and the one-hour cooldown has elapsed |
 
 ---
 
@@ -418,7 +418,7 @@ The Logger is ephemeral: rotated daily, lost on container restart, not queryable
 | `failed` | `"Failed after N retries: <error message>"` |
 | `retry_scheduled` | `"Retry N/3 in Xms: <error message>"` |
 | `dependency_not_met` | `"Re-queued with 10000ms delay"` |
-| `dlq_alert_triggered` | `"DLQ count hit 10"` |
+| `dlq_alert_triggered` | `"DLQ count reached threshold (>= 10)"` |
 
 ---
 
@@ -446,6 +446,26 @@ Application-level locking (e.g., a Redis mutex, an in-memory lock map) is not su
 - The DB already has the lock mechanism built in. A conditional UPDATE with a row lock is the simplest thing that works across any number of worker instances.
 
 The heap pop and the DB claim are not atomic. Two ticks of the same worker could pop the same entry if the heap is not properly guarded. The `inHeap` set prevents this within a single process: once popped, the ID is removed from the set before the next pop. The DB-level claim is the cross-instance safety net.
+
+---
+
+## Pagination
+
+`GET /jobs` and `GET /jobs/dlq` accept optional `page` (default 1) and `limit` (default 20, max 100) query parameters. Both return a `PaginatedResult<Job>` envelope:
+
+```json
+{
+  "data": [ ... ],
+  "total": 147,
+  "page": 1,
+  "limit": 20,
+  "totalPages": 8
+}
+```
+
+The response is always an object with the `data` array inside it, not a bare array. This lets the frontend render pagination controls, handle empty states (`data: []`), and show total counts without a separate count endpoint. The `totalPages` field avoids an extra division on the client.
+
+Results are ordered by `createdAt DESC` (newest first) in both endpoints.
 
 ---
 

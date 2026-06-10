@@ -6,9 +6,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { SseService } from '../common/sse/sse.service';
+import { PaginatedResult } from '../common/types/paginated-result';
 import { Job, JobStatus } from './entities/job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
+import { PaginationDto } from './dto/pagination.dto';
 
 @Injectable()
 export class JobsService {
@@ -39,12 +41,29 @@ export class JobsService {
     return saved;
   }
 
-  findAll(): Promise<Job[]> {
-    return this.jobsRepository.find();
+  async findAll(pagination: PaginationDto): Promise<PaginatedResult<Job>> {
+    const { page = 1, limit = 20 } = pagination;
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.jobsRepository.findAndCount({
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  findDlq(): Promise<Job[]> {
-    return this.jobsRepository.findBy({ inDlq: true });
+  async findDlq(pagination: PaginationDto): Promise<PaginatedResult<Job>> {
+    const { page = 1, limit = 20 } = pagination;
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.jobsRepository.findAndCount({
+      where: { inDlq: true },
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async retryFromDlq(id: string): Promise<Job> {

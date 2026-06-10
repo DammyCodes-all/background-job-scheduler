@@ -48,12 +48,12 @@ See [docs/architecture.md](docs/architecture.md) for the full design document co
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/jobs` | Create a job |
-| `GET` | `/jobs` | List jobs with optional filters |
+| `GET` | `/jobs?page=1&limit=20` | List all jobs (paginated, newest first) |
 | `GET` | `/jobs/:id` | Get a job by ID |
 | `PATCH` | `/jobs/:id` | Update a job |
-| `DELETE` | `/jobs/:id` | Soft-delete a job |
 | `PATCH` | `/jobs/:id/cancel` | Cancel a pending job |
-| `GET` | `/jobs/dlq` | List dead-letter queue jobs |
+| `DELETE` | `/jobs/:id` | Delete a job (must not be processing) |
+| `GET` | `/jobs/dlq?page=1&limit=20` | List dead-letter queue jobs (paginated) |
 | `POST` | `/jobs/:id/retry` | Retry a DLQ job (resets retry count) |
 
 ### SSE

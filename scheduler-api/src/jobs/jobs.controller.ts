@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
   Sse,
   MessageEvent,
 } from '@nestjs/common';
@@ -22,6 +23,7 @@ import { JobsService } from './jobs.service';
 import { Job } from './entities/job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
+import { PaginationDto } from './dto/pagination.dto';
 
 @ApiTags('jobs')
 @Controller('jobs')
@@ -53,17 +55,23 @@ export class JobsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all jobs' })
-  @ApiResponse({ status: 200, description: 'Return all jobs.', type: [Job] })
-  findAll() {
-    return this.jobsService.findAll();
+  @ApiOperation({ summary: 'Get all jobs (paginated)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return paginated jobs.',
+  })
+  findAll(@Query() pagination: PaginationDto) {
+    return this.jobsService.findAll(pagination);
   }
 
   @Get('dlq')
-  @ApiOperation({ summary: 'List all jobs in the dead-letter queue' })
-  @ApiResponse({ status: 200, description: 'Return DLQ jobs.', type: [Job] })
-  findDlq() {
-    return this.jobsService.findDlq();
+  @ApiOperation({ summary: 'List jobs in the dead-letter queue (paginated)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return paginated DLQ jobs.',
+  })
+  findDlq(@Query() pagination: PaginationDto) {
+    return this.jobsService.findDlq(pagination);
   }
 
   @Get(':id')
