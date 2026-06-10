@@ -2,6 +2,7 @@ import { Repository } from 'typeorm';
 import { Job, JobInterval, JobStatus } from '../jobs/entities/job.entity';
 import { HeapFeederService } from '../scheduler/heap-feeder.service';
 import { DefaultJobHandler } from './default-job-handler';
+import { DlqAlertHandler } from './handlers/dlq-alert.handler';
 import { HandlersRegistry } from './handlers-registry';
 import { JobLogger } from './job-logger.service';
 import { WorkerService } from './worker.service';
@@ -23,7 +24,7 @@ const createJob = (overrides: Partial<Job> = {}): Job => ({
 
 describe('WorkerService', () => {
   let heapFeeder: jest.Mocked<HeapFeederService>;
-  let jobsRepository: jest.Mocked<Pick<Repository<Job>, 'createQueryBuilder' | 'update' | 'findBy' | 'save'>>;
+  let jobsRepository: jest.Mocked<Pick<Repository<Job>, 'createQueryBuilder' | 'update' | 'findBy' | 'save' | 'countBy'>>;
   let queryBuilder: {
     update: jest.Mock;
     set: jest.Mock;
@@ -34,6 +35,7 @@ describe('WorkerService', () => {
   let jobLogger: jest.Mocked<JobLogger>;
   let handlersRegistry: jest.Mocked<HandlersRegistry>;
   let defaultHandler: jest.Mocked<DefaultJobHandler>;
+  let dlqAlertHandler: jest.Mocked<DlqAlertHandler>;
   let service: WorkerService;
 
   beforeEach(() => {
@@ -54,6 +56,7 @@ describe('WorkerService', () => {
       update: jest.fn(),
       findBy: jest.fn(),
       save: jest.fn(),
+      countBy: jest.fn(),
     } as any;
 
     jobLogger = {
@@ -69,12 +72,17 @@ describe('WorkerService', () => {
       execute: jest.fn(),
     } as any;
 
+    dlqAlertHandler = {
+      execute: jest.fn(),
+    } as any;
+
     service = new WorkerService(
       heapFeeder,
       jobsRepository as unknown as Repository<Job>,
       jobLogger,
       handlersRegistry,
       defaultHandler,
+      dlqAlertHandler,
     );
   });
 
@@ -238,6 +246,57 @@ describe('WorkerService', () => {
         'failed',
         expect.stringContaining('final error'),
       );
+    });
+
+    it('creates a dlq_alert job when DLQ count hits the threshold', async () => {
+      const job = createJob({
+        id: 'job-dlq-threshold',
+        retryCount: 2,
+        maxRetries: 3,
+      });
+
+      heapFeeder.popNextJob.mockResolvedValue(job);
+      queryBuilder.execute.mockResolvedValue({ affected: 1 });
+      handlersRegistry.get.mockReturnValue(undefined);
+      defaultHandler.execute.mockRejectedValue(new Error('fail'));
+      jobsRepository.countBy!.mockResolvedValue(10);
+
+      await service.tick();
+
+      expect(jobsRepository.save).toHaveBeenCalledWith({
+        type: 'dlq_alert',
+        payload: { dlqCount: 10 },
+        priority: 0,
+        status: JobStatus.PENDING,
+        scheduledAt: expect.any(Date),
+      });
+      expect(jobLogger.log).toHaveBeenCalledWith(
+        'job-dlq-threshold',
+        'dlq_alert_triggered',
+        expect.stringContaining('10'),
+      );
+    });
+
+    it('does not create dlq_alert when DLQ count is below threshold', async () => {
+      const job = createJob({
+        id: 'job-dlq-below',
+        retryCount: 2,
+        maxRetries: 3,
+      });
+
+      heapFeeder.popNextJob.mockResolvedValue(job);
+      queryBuilder.execute.mockResolvedValue({ affected: 1 });
+      handlersRegistry.get.mockReturnValue(undefined);
+      defaultHandler.execute.mockRejectedValue(new Error('fail'));
+      jobsRepository.countBy!.mockResolvedValue(5);
+
+      await service.tick();
+
+      const dlqAlertCalls = (jobsRepository.save as jest.Mock).mock.calls.filter(
+        (call: any[]) => call[0]?.type === 'dlq_alert',
+      );
+
+      expect(dlqAlertCalls).toHaveLength(0);
     });
   });
 });

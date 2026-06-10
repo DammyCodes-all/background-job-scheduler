@@ -1,11 +1,11 @@
 import { FindManyOptions, LessThanOrEqual, Repository } from 'typeorm';
 import { Job, JobStatus } from '../jobs/entities/job.entity';
 import {
-  HeapFeederService,
   MIN_PRIORITY,
   STARVATION_SWEEP_INTERVAL_MS,
   STARVATION_THRESHOLD_MS,
-} from './heap-feeder.service';
+} from './constants';
+import { HeapFeederService } from './heap-feeder.service';
 import { JobPriorityHeap } from './job-priority-heap';
 
 type MockRepository = {

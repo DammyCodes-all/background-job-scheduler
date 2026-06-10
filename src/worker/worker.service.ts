@@ -8,26 +8,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Job, JobInterval, JobStatus } from '../jobs/entities/job.entity';
 import { HeapFeederService } from '../scheduler/heap-feeder.service';
+import {
+  BACKOFF_DELAYS_MS,
+  BACKOFF_JITTER_FACTOR,
+  DEPENDENCY_REQUEUE_DELAY_MS,
+  DLQ_THRESHOLD,
+  REPEAT_INTERVAL_MS,
+  WORKER_INTERVAL_MS,
+} from './constants';
 import { DefaultJobHandler } from './default-job-handler';
+import { DlqAlertHandler } from './handlers/dlq-alert.handler';
 import { HandlersRegistry } from './handlers-registry';
 import { JobLogger } from './job-logger.service';
-
-const WORKER_INTERVAL_MS = 1_000;
-const DEPENDENCY_REQUEUE_DELAY_MS = 10_000;
-
-const BACKOFF_DELAYS_MS = [1_000, 5_000, 25_000];
-const BACKOFF_JITTER_FACTOR = 0.5;
-
-const REPEAT_INTERVAL_MS: Record<JobInterval, number> = {
-  [JobInterval.EVERY_MINUTE]: 60_000,
-  [JobInterval.EVERY_5_MINUTES]: 5 * 60_000,
-  [JobInterval.EVERY_15_MINUTES]: 15 * 60_000,
-  [JobInterval.EVERY_30_MINUTES]: 30 * 60_000,
-  [JobInterval.HOURLY]: 60 * 60_000,
-  [JobInterval.DAILY]: 24 * 60 * 60_000,
-  [JobInterval.WEEKLY]: 7 * 24 * 60 * 60_000,
-  [JobInterval.MONTHLY]: 30 * 24 * 60 * 60_000,
-};
 
 @Injectable()
 export class WorkerService implements OnModuleInit, OnModuleDestroy {
@@ -41,9 +33,11 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly jobLogger: JobLogger,
     private readonly handlersRegistry: HandlersRegistry,
     private readonly defaultHandler: DefaultJobHandler,
+    private readonly dlqAlertHandler: DlqAlertHandler,
   ) {}
 
   onModuleInit(): void {
+    this.handlersRegistry.register('dlq_alert', this.dlqAlertHandler);
     this.scheduleNext();
   }
 
@@ -174,6 +168,23 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         'failed',
         `Failed after ${newRetryCount} retries: ${errMsg}`,
       );
+
+      const dlqCount = await this.jobsRepository.countBy({ inDlq: true });
+
+      if (dlqCount === DLQ_THRESHOLD) {
+        await this.jobsRepository.save({
+          type: 'dlq_alert',
+          payload: { dlqCount },
+          priority: 0,
+          status: JobStatus.PENDING,
+          scheduledAt: new Date(),
+        });
+        await this.jobLogger.log(
+          job.id,
+          'dlq_alert_triggered',
+          `DLQ count hit ${DLQ_THRESHOLD}`,
+        );
+      }
     } else {
       const delayMs = this.calculateBackoff(newRetryCount);
 

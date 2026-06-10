@@ -1,0 +1,4 @@
+export const HEAP_FEED_INTERVAL_MS = 500;
+export const STARVATION_SWEEP_INTERVAL_MS = 30_000;
+export const STARVATION_THRESHOLD_MS = 2 * 60 * 1000;
+export const MIN_PRIORITY = 1;

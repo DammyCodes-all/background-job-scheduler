@@ -7,12 +7,13 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, Repository } from 'typeorm';
 import { Job, JobStatus } from '../jobs/entities/job.entity';
+import {
+  HEAP_FEED_INTERVAL_MS,
+  MIN_PRIORITY,
+  STARVATION_SWEEP_INTERVAL_MS,
+  STARVATION_THRESHOLD_MS,
+} from './constants';
 import { JobPriorityHeap } from './job-priority-heap';
-
-export const HEAP_FEED_INTERVAL_MS = 500;
-export const STARVATION_SWEEP_INTERVAL_MS = 30_000;
-export const STARVATION_THRESHOLD_MS = 2 * 60 * 1000;
-export const MIN_PRIORITY = 1;
 
 @Injectable()
 export class HeapFeederService implements OnModuleInit, OnModuleDestroy {
