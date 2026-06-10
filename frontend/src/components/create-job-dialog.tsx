@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { useState, useRef, type KeyboardEvent } from "react";
 import {
   Sheet,
@@ -17,6 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   FlowIcon,
@@ -24,6 +28,7 @@ import {
   ClockIcon,
   LinkIcon,
   Cancel01Icon,
+  ArrowDown01Icon,
 } from "@hugeicons/core-free-icons";
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { cn } from "@/lib/utils";
@@ -57,7 +62,8 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
   const [type, setType] = useState("");
   const [priority, setPriority] = useState("3");
   const [maxRetries, setMaxRetries] = useState("3");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduledAt, setScheduledAt] = useState<Date | undefined>();
+  const [scheduledTime, setScheduledTime] = useState("");
   const [intervalVal, setIntervalVal] = useState<string>("none");
   const [payload, setPayload] = useState("");
   const [payloadError, setPayloadError] = useState<string | null>(null);
@@ -120,7 +126,16 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
         type: type.trim(),
         priority: Number(priority),
         maxRetries: Number(maxRetries),
-        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        scheduledAt: scheduledAt
+          ? (() => {
+              const d = new Date(scheduledAt);
+              if (scheduledTime) {
+                const [h, m] = scheduledTime.split(":").map(Number);
+                d.setHours(h, m, 0, 0);
+              }
+              return d.toISOString();
+            })()
+          : undefined,
         interval: intervalVal === "none" ? undefined : (intervalVal as JobInterval),
         payload: payload ? JSON.parse(payload) : undefined,
         dependency_ids: depIds.length > 0 ? depIds : undefined,
@@ -133,7 +148,8 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
     setType("");
     setPriority("3");
     setMaxRetries("3");
-    setScheduledAt("");
+    setScheduledAt(undefined);
+    setScheduledTime("");
     setIntervalVal("none");
     setPayload("");
     setPayloadError(null);
@@ -144,7 +160,13 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (v) setSubmitError(null); onOpenChange(v); }}>
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        if (v) setSubmitError(null);
+        onOpenChange(v);
+      }}
+    >
       <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
           <div className="flex items-center gap-2">
@@ -248,21 +270,40 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
               </span>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="scheduledAt" className="text-xs font-medium">
-                Scheduled At
-              </Label>
-              <Input
-                id="scheduledAt"
-                type="datetime-local"
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                className="h-8"
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Leave empty to schedule immediately
-              </p>
-            </div>
+            <FieldGroup className="flex-row">
+              <Field>
+                <FieldLabel>Date</FieldLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-32 justify-between font-normal h-8">
+                      {scheduledAt ? format(scheduledAt, "PPP") : "Select date"}
+                      <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="size-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={scheduledAt}
+                      defaultMonth={scheduledAt}
+                      onSelect={(d) => {
+                        setScheduledAt(d);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </Field>
+              <Field className="w-32">
+                <FieldLabel>Time</FieldLabel>
+                <Input
+                  type="time"
+                  value={scheduledTime}
+                  step={1}
+                  defaultValue="10:30:00"
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  className="h-8 appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                />
+              </Field>
+            </FieldGroup>
 
             <div className="space-y-1.5">
               <Label htmlFor="interval" className="text-xs font-medium">

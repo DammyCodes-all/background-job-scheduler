@@ -15,7 +15,6 @@ A full-stack background job scheduler with priority queuing, retry logic, a dead
 ## Architecture
 
 > Full architecture docs: [`scheduler-api/docs/architecture.md`](scheduler-api/docs/architecture.md)
-> Frontend integration guide: [`scheduler-api/docs/frontend-integration.md`](scheduler-api/docs/frontend-integration.md)
 
 ```
 Client (SSE) ← → NestJS API ← → PostgreSQL
