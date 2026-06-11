@@ -33,16 +33,19 @@ const createRepository = (): MockRepository => ({
 });
 
 const mockSseService = { emit: jest.fn() };
+const mockLogRepo = { save: jest.fn() };
 
 const createService = (repository: MockRepository): JobsService =>
   new JobsService(
     repository as unknown as Repository<Job>,
+    mockLogRepo as unknown as Repository<any>,
     mockSseService as unknown as SseService,
   );
 
 describe('JobsService', () => {
   beforeEach(() => {
     mockSseService.emit.mockClear();
+    mockLogRepo.save.mockClear();
   });
 
   it('deduplicates and validates dependencies before creating a job', async () => {
@@ -237,6 +240,11 @@ describe('JobsService', () => {
     expect(mockSseService.emit).toHaveBeenCalledWith('job_updated', {
       jobId: 'job-1',
       status: JobStatus.CANCELLED,
+    });
+    expect(mockLogRepo.save).toHaveBeenCalledWith({
+      jobId: 'job-1',
+      event: 'cancelled',
+      message: 'Job cancelled by user',
     });
   });
 

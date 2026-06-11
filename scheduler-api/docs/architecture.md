@@ -257,7 +257,7 @@ The DLQ is not a separate table or queue. It is a boolean flag: `inDlq: true` on
 
 ### The threshold
 
-When a job lands in the DLQ and the total DLQ count reaches **10 or more**, the worker creates a `dlq_alert` job at priority 0 (highest). A registered `DlqAlertHandler` receives it. Currently the handler logs a warning. It is a swap point for a real email or notification handler.
+When a job lands in the DLQ and the total DLQ count reaches **10 or more**, the worker creates a `dlq_alert` job at priority 0 (highest). The `DlqAlertHandler` receives it and simulates sending an email: a 500–2500ms randomized delay (mimicking SMTP latency), structured logging of both the send attempt and delivery confirmation, and a log line targeting `admin@dilamme.com` with the current DLQ count.
 
 The threshold check uses `>= 10` with a one-hour cooldown. If the count is already at 15 and a new job enters the DLQ, no alert fires because the cooldown has not elapsed. After one hour, the next DLQ entry triggers a fresh alert. This prevents alert fatigue while ensuring sustained DLQ pressure is not silently ignored.
 
@@ -429,10 +429,12 @@ The Logger is ephemeral: rotated daily, lost on container restart, not queryable
 ### Every event and its context
 
 | Event | Context carried in `message` |
-|---|---|
+|---|---|---|
+| `created` | `"Job created with type=<type> priority=<priority>"` |
 | `processing` | `"Worker picked up job"` |
 | `completed` | `"Job completed successfully"` |
 | `failed` | `"Failed after N retries: <error message>"` |
+| `cancelled` | `"Job cancelled by user"` |
 | `retry_scheduled` | `"Retry N/3 in Xms: <error message>"` |
 | `dependency_not_met` | `"Re-queued with 10000ms delay"` |
 | `dlq_alert_triggered` | `"DLQ count reached threshold (>= 10)"` |

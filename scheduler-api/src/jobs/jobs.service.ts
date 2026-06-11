@@ -2,21 +2,27 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { SseService } from '../common/sse/sse.service';
 import { PaginatedResult } from '../common/types/paginated-result';
 import { Job, JobStatus } from './entities/job.entity';
+import { JobLog } from './entities/job-logs.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { PaginationDto } from './dto/pagination.dto';
 
 @Injectable()
 export class JobsService {
+  private readonly logger = new Logger(JobsService.name);
+
   constructor(
     @InjectRepository(Job)
     private jobsRepository: Repository<Job>,
+    @InjectRepository(JobLog)
+    private jobLogRepository: Repository<JobLog>,
     private readonly sseService: SseService,
   ) {}
 
@@ -30,6 +36,12 @@ export class JobsService {
       dependencyIds,
     });
     const saved = await this.jobsRepository.save(job);
+
+    await this.jobLogRepository.save({
+      jobId: saved.id,
+      event: 'created',
+      message: `Job created with type=${saved.type} priority=${saved.priority}`,
+    });
 
     this.sseService.emit('job_created', {
       jobId: saved.id,
@@ -158,6 +170,11 @@ export class JobsService {
     this.sseService.emit('job_updated', {
       jobId: id,
       status: JobStatus.CANCELLED,
+    });
+    await this.jobLogRepository.save({
+      jobId: id,
+      event: 'cancelled',
+      message: 'Job cancelled by user',
     });
 
     return this.findOne(id);

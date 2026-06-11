@@ -54,13 +54,13 @@ const intervals: { value: JobInterval | "none"; label: string }[] = [
 
 const priorityOptions = [
   { value: "1", label: "High", desc: "Urgent" },
-  { value: "3", label: "Medium", desc: "Normal" },
-  { value: "5", label: "Low", desc: "Best effort" },
+  { value: "2", label: "Medium", desc: "Normal" },
+  { value: "3", label: "Low", desc: "Best effort" },
 ] as const;
 
 export function CreateJobDialog({ open, onOpenChange }: Props) {
   const [type, setType] = useState("");
-  const [priority, setPriority] = useState("3");
+  const [priority, setPriority] = useState("2");
   const [maxRetries, setMaxRetries] = useState("3");
   const [scheduledAt, setScheduledAt] = useState<Date | undefined>();
   const [scheduledTime, setScheduledTime] = useState("");
@@ -152,7 +152,7 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
     }
 
     setType("");
-    setPriority("3");
+    setPriority("2");
     setMaxRetries("3");
     setScheduledAt(undefined);
     setScheduledTime("");
