@@ -16,6 +16,9 @@ export class StatsResponseDto {
   @ApiProperty({ example: 8, description: 'Number of cancelled jobs' })
   cancelled!: number;
 
-  @ApiProperty({ example: 221, description: 'Total number of jobs across all statuses' })
+  @ApiProperty({
+    example: 221,
+    description: 'Total number of jobs across all statuses',
+  })
   total!: number;
 }

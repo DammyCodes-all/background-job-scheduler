@@ -9,8 +9,15 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Root endpoint', description: 'Returns a simple greeting to confirm the server is running.' })
-  @ApiResponse({ status: 200, description: 'Greeting message.', schema: { example: 'Hello World!' } })
+  @ApiOperation({
+    summary: 'Root endpoint',
+    description: 'Returns a simple greeting to confirm the server is running.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Greeting message.',
+    schema: { example: 'Hello World!' },
+  })
   getHello(): string {
     return this.appService.getHello();
   }

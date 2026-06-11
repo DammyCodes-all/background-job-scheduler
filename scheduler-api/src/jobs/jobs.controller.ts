@@ -125,7 +125,7 @@ export class JobsController {
   @ApiOperation({
     summary: 'Update a job',
     description:
-      'Updates one or more fields on an existing job. Supports updating type, payload, priority, maxRetries, scheduledAt, interval, and dependency_ids. The status field can be set to manually move a job to cancelled or back to pending. Validates dependency DAG on change.',
+      'Updates one or more fields on an existing job. Supports updating type, payload, priority, maxRetries, scheduledAt, interval, and dependency_ids. The status field is not supported, it will be ignored. All status changes are managed internally by the worker. Validates dependency DAG on change.',
   })
   @ApiResponse({
     status: 200,
