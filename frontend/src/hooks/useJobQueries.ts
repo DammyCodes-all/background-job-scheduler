@@ -63,12 +63,11 @@ export function useDeleteJobMutation() {
         const prev = queryClient.getQueryData(key)
         if (prev) {
           previousQueries.set(JSON.stringify(key), prev)
+          const prevData = prev as { data: Array<{ id: string }>; total: number }
           queryClient.setQueryData(key, {
-            ...(prev as Record<string, unknown>),
-            data: ((prev as { data: unknown[] }).data ?? []).filter(
-              (job: { id: string }) => job.id !== id,
-            ),
-            total: Math.max(0, ((prev as { total: number }).total ?? 0) - 1),
+            ...prevData,
+            data: prevData.data.filter((job) => job.id !== id),
+            total: Math.max(0, prevData.total - 1),
           })
         }
       }
