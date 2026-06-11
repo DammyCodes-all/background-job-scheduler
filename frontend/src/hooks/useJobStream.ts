@@ -66,5 +66,5 @@ export function useJobStream(onEvent?: SseCallback) {
       setConnected(false)
       timeouts.forEach(clearTimeout)
     }
-  }, [setConnected, addFlashingId, removeFlashingId, queryClient, onEvent])
+  }, [setConnected, addFlashingId, removeFlashingId, queryClient])
 }

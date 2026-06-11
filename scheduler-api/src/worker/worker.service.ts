@@ -87,7 +87,11 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       await handler.execute(job);
       await this.handleSuccess(job);
     } catch (err: unknown) {
-      await this.handleFailure(job, err);
+      try {
+        await this.handleFailure(job, err);
+      } catch (innerErr) {
+        this.logger.error(`handleFailure threw for job ${job.id}:`, innerErr);
+      }
     }
   }
 

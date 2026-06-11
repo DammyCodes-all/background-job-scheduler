@@ -68,8 +68,11 @@ export function useDeleteJobMutation() {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: jobKeys.all })
       const previousQueries = new Map<string, unknown>()
-      for (const page of [1, 2, 3, 4, 5]) {
-        const key = jobKeys.list(page)
+      const cachedPages = queryClient
+        .getQueryCache()
+        .findAll({ queryKey: ['jobs', 'list'], exact: false })
+      for (const query of cachedPages) {
+        const key = query.queryKey
         const prev = queryClient.getQueryData(key)
         if (prev) {
           previousQueries.set(JSON.stringify(key), prev)

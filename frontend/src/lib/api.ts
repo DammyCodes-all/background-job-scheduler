@@ -67,16 +67,23 @@ export interface HealthResponse {
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => null)
-    throw new Error(body?.error ?? `Request failed: ${res.status}`)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 15000)
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+      signal: controller.signal,
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      throw new Error(body?.error ?? `Request failed: ${res.status}`)
+    }
+    if (res.status === 204) return undefined as T
+    return res.json()
+  } finally {
+    clearTimeout(timeoutId)
   }
-  if (res.status === 204) return undefined as T
-  return res.json()
 }
 
 export const api = {

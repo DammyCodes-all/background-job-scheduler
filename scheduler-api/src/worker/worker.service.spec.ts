@@ -310,6 +310,7 @@ describe('WorkerService', () => {
         errorMessage: 'final error',
         inDlq: true,
         retryCount: 3,
+        completedAt: expect.any(Date),
       });
       expect(jobLogger.log).toHaveBeenCalledWith(
         'job-failed',

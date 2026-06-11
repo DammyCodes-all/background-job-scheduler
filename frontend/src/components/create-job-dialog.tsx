@@ -130,8 +130,14 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
           ? (() => {
               const d = new Date(scheduledAt);
               if (scheduledTime) {
-                const [h, m] = scheduledTime.split(":").map(Number);
-                d.setHours(h, m, 0, 0);
+                const parts = scheduledTime.split(":");
+                if (parts.length >= 2) {
+                  const h = parseInt(parts[0], 10);
+                  const m = parseInt(parts[1], 10);
+                  if (!isNaN(h) && !isNaN(m)) {
+                    d.setHours(h, m, 0, 0);
+                  }
+                }
               }
               return d.toISOString();
             })()

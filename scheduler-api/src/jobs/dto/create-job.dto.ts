@@ -7,6 +7,8 @@ import {
   IsArray,
   IsUUID,
   IsEnum,
+  Min,
+  Max,
 } from 'class-validator';
 import { Expose, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -28,11 +30,15 @@ export class CreateJobDto {
   @ApiPropertyOptional({ example: 1, description: 'Priority of the job' })
   @IsOptional()
   @IsInt()
+  @Min(1)
+  @Max(100)
   priority?: number;
 
   @ApiPropertyOptional({ example: 3, description: 'Max retries' })
   @IsOptional()
   @IsInt()
+  @Min(0)
+  @Max(100)
   maxRetries?: number;
 
   @ApiPropertyOptional({ description: 'Scheduled execution time' })
