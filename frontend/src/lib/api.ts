@@ -104,6 +104,9 @@ export const api = {
 
   retryJob: (id: string) =>
     request<Job>(`/jobs/${id}/retry`, { method: 'POST' }),
+
+  getJobStats: () =>
+    request<Record<string, number>>('/jobs/stats'),
 }
 
 export type SseEventType = 'job_created' | 'job_updated' | 'dlq_alert'

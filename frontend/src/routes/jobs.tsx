@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, } from "react";
-import { useJobsQuery, useCancelJobMutation, useDeleteJobMutation } from "@/hooks/useJobQueries";
+import { useJobsQuery, useCancelJobMutation, useDeleteJobMutation, useJobStats } from "@/hooks/useJobQueries";
 import { useJobStore } from "@/stores/jobStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -126,19 +126,20 @@ function JobsPage() {
 
   const flashingIds = useJobStore((s) => s.flashingIds);
   const { data, isLoading } = useJobsQuery(page);
+  const { data: stats } = useJobStats();
   const cancelJob = useCancelJobMutation();
   const deleteJob = useDeleteJobMutation();
 
   const allJobs = useMemo(() => data?.data ?? [], [data?.data]);
   const totalCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: data?.total ?? 0 };
+    const counts: Record<string, number> = { all: stats?.total ?? 0 };
     for (const s of ALL_STATUSES) {
       if (s !== "all") {
-        counts[s] = allJobs.filter((j) => j.status === s).length;
+        counts[s] = stats?.[s] ?? 0;
       }
     }
     return counts;
-  }, [allJobs, data?.total]);
+  }, [stats]);
 
   const filtered = useMemo(() => {
     return allJobs

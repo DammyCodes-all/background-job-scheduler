@@ -74,6 +74,12 @@ export class JobsController {
     return this.jobsService.findDlq(pagination);
   }
 
+  @Get('stats')
+  @ApiOperation({ summary: 'Get job status counts' })
+  stats() {
+    return this.jobsService.getStats();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a job by id' })
   @ApiResponse({ status: 200, description: 'Return a single job.', type: Job })

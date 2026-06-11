@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import { Job } from '../../jobs/entities/job.entity';
 import { JobHandler } from '../interfaces/job-handler.interface';
 
-const ERROR_RATE = 0.2;
+const ERROR_RATE = 0.5;
 const MIN_DELAY_MS = 500;
 const MAX_DELAY_MS = 5_000;
 

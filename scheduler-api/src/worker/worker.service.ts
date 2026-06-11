@@ -181,6 +181,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       await this.jobsRepository.update(job.id, {
         status: JobStatus.FAILED,
         errorMessage: errMsg,
+        completedAt: new Date(),
         inDlq: true,
         retryCount: newRetryCount,
       });

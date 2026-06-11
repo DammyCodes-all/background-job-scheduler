@@ -53,6 +53,32 @@ export class JobsService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
+  async getStats(): Promise<Record<string, number>> {
+    const rows = await this.jobsRepository
+      .createQueryBuilder('job')
+      .select('job.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('job.status')
+      .getRawMany<{ status: string; count: string }>();
+
+    const stats: Record<string, number> = {
+      pending: 0,
+      processing: 0,
+      completed: 0,
+      failed: 0,
+      cancelled: 0,
+      total: 0,
+    };
+
+    for (const row of rows) {
+      const n = parseInt(row.count, 10);
+      stats[row.status] = n;
+      stats.total += n;
+    }
+
+    return stats;
+  }
+
   async findDlq(pagination: PaginationDto): Promise<PaginatedResult<Job>> {
     const { page = 1, limit = 20 } = pagination;
     const skip = (page - 1) * limit;

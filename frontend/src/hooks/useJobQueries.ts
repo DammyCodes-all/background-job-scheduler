@@ -13,6 +13,7 @@ export function useJobsQuery(page = 1) {
   return useQuery({
     queryKey: jobKeys.list(page),
     queryFn: () => api.listJobs(page, 50),
+    refetchInterval: 10_000,
   })
 }
 
@@ -20,6 +21,15 @@ export function useDlqQuery(page = 1) {
   return useQuery({
     queryKey: jobKeys.dlq(page),
     queryFn: () => api.listDlq(page, 50),
+    refetchInterval: 10_000,
+  })
+}
+
+export function useJobStats() {
+  return useQuery({
+    queryKey: jobKeys.stats,
+    queryFn: () => api.getJobStats(),
+    refetchInterval: 5_000,
   })
 }
 

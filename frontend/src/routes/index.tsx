@@ -2,8 +2,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useJobsQuery } from '@/hooks/useJobQueries'
-import { useMemo } from 'react'
+import { useJobStats } from '@/hooks/useJobQueries'
 
 export const Route = createFileRoute('/')({
   component: DashboardPage,
@@ -20,16 +19,7 @@ const statusConfig: Record<StatusKey, { label: string; value: StatusKey; color: 
 }
 
 function DashboardPage() {
-  const { data, isLoading } = useJobsQuery(1)
-
-  const stats = useMemo(() => {
-    const counts: Record<string, number> = { pending: 0, processing: 0, completed: 0, failed: 0, cancelled: 0 }
-    if (!data?.data) return counts
-    for (const job of data.data) {
-      if (job.status in counts) counts[job.status]++
-    }
-    return counts
-  }, [data])
+  const { data: stats, isLoading } = useJobStats()
 
   if (isLoading) {
     return (
@@ -45,6 +35,7 @@ function DashboardPage() {
   }
 
   const entries = Object.entries(statusConfig) as [StatusKey, typeof statusConfig[StatusKey]][]
+  const total = stats?.total ?? 0
 
   return (
     <div className="size-full space-y-6 p-6">
@@ -55,8 +46,8 @@ function DashboardPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         {entries.map(([key, config]) => {
-          const count = stats[key] ?? 0
-          const pct = data?.total ? Math.round((count / data.total) * 100) : 0
+          const count = stats?.[key] ?? 0
+          const pct = total ? Math.round((count / total) * 100) : 0
           return (
             <Card key={key}>
               <CardHeader className="pb-2">
