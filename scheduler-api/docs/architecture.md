@@ -104,19 +104,36 @@ On `popNextJob()`, the ID is removed from the set. On `markRemovedFromHeap()` (u
 
 ### Timing Wheel
 
-- O(1) insert: append to a circular slot, no comparisons
-- O(1) pop: advance a cursor, drain the current slot
-- No ordering guarantee within a slot. Jobs in the same slot are FIFO at best, but their relative priority is lost.
-- Best for high-throughput uniform scheduling where all jobs have similar priority
-- Memory proportional to the number of slots multiplied by slot capacity
+A standalone implementation at `scripts/timing-wheel.ts` for academic comparison
+
+The wheel is a circular array of fixed-size time buckets. Each bucket (slot) represents a time interval of `tickDuration` milliseconds. A cursor advances one slot per tick. On insert, the job is assigned to a slot based on `(scheduledAt - startTime) / tickDuration`. On drain, the cursor advances and every job in the vacated slot is collected.
+
+- O(1) insert: no comparisons, just a modulo operation to hash into a slot
+- O(1) per-tick drain: advance cursor, collect the slot's FIFO queue
+- No ordering guarantee within a slot: jobs in the same bucket come out in insertion order regardless of priority
+- Memory proportional to slot count (pre-allocated empty arrays), independent of job count
+- Trade-off: forgoes priority ordering entirely for constant-time insert and drain
 
 ### Benchmark
 
-Benchmark script is at `scripts/benchmark.ts`. Numbers to be added after timing wheel implementation.
+Benchmark script at `scripts/benchmark.ts` — runnable with `pnpm ts-node scripts/benchmark.ts`. Generates 10,000 mock jobs in memory with uniform random `scheduledAt` across a 60-second window and random priority 1–5. Measures total insert time and total drain time for both structures. Verifies heap drain produces correct priority order. The wheel makes no ordering guarantee.
+
+**Results (10ms tick, 10,000 slots, 10,000 jobs):**
+
+| Operation | Timing Wheel | Min-Heap | Ratio |
+|---|---|---|---|
+| Insert (10,000) | 2,854 µs | 3,896 µs | **0.73x** |
+| Drain (10,000) | 1,440 µs | 10,247 µs | **0.14x** |
+
+The wheel inserts 27% faster (O(1) modulo vs O(log n) bubble-up) and drains ~7x faster (slot scan vs O(N log N) sift-down). The heap's overhead is the cost of maintaining strict priority ordering: every push and pop walks the tree, comparing up to log₂(10,000) ≈ 14 nodes.
+
+Heap drain order verified: all 10,000 jobs emerged in correct priority order (primary, then scheduledAt, then createdAt). The wheel makes no such claim — jobs within a slot are FIFO, and priority is ignored.
 
 ### Which one in production?
 
 Heap when priority ordering matters, which is most of the time for a job scheduler. If you need the highest-priority job out of 50k pending jobs, the heap always gives you the right one. The timing wheel shines in throughput-bound systems where all jobs have equal or near-equal priority (e.g., a cron-like scheduler firing millions of identical tasks). For this system, where jobs have user-assigned priorities and dependency chains, the heap is the correct default. A timing wheel could be added as an alternative scheduler for high-volume, low-priority-criteria job types.
+
+The two structures illustrate a fundamental scheduling trade-off: **throughput vs ordering correctness**. The heap preserves ordering at O(log n) cost. The wheel trades ordering for O(1) — every operation is constant time, but you lose the ability to reorder by priority. In systems where jobs are interchangeable (every job is equally important), the wheel dominates. In systems where priority is a first-class concern (this one), the heap is the right choice.
 
 ---
 
