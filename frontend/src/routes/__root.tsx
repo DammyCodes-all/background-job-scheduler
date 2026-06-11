@@ -23,7 +23,7 @@ function RootLayout() {
       <SidebarProvider style={{ "--sidebar-width": "14rem" } as React.CSSProperties}>
         <AppSidebar onCreateClick={() => setCreateOpen(true)} />
         <SidebarInset className="min-w-0">
-          <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-2">
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-2">
             <SidebarTrigger className="size-7" />
             <div className="ml-auto flex items-center gap-2">
               <span

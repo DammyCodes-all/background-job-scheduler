@@ -9,7 +9,6 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { useJobStats } from '@/hooks/useJobQueries'
-import { useJobStore } from '@/stores/jobStore'
 import { api } from '@/lib/api'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -44,7 +43,7 @@ const statusBadge: Record<string, string> = {
 
 function DashboardPage() {
   const { data: stats, isLoading } = useJobStats()
-  const isConnected = useJobStore((s) => s.isConnected)
+
 
   const { data: recentData } = useQuery({
     queryKey: ['jobs', 'recent'],
@@ -75,23 +74,9 @@ function DashboardPage() {
 
   return (
     <div className="size-full space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold">Dashboard</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Job status overview</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={cn(
-            "inline-flex items-center gap-1.5 text-xs tabular-nums",
-            isConnected ? "text-status-completed" : "text-status-failed",
-          )}>
-            <span className={cn(
-              "size-1.5 rounded-full motion-safe:transition-colors",
-              isConnected ? "bg-status-completed motion-safe:animate-pulse" : "bg-status-failed",
-            )} />
-            {isConnected ? "Connected" : "Disconnected"}
-          </span>
-        </div>
+      <div>
+        <h1 className="text-lg font-semibold">Dashboard</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">Job status overview</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
@@ -121,12 +106,12 @@ function DashboardPage() {
         })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card px-4 py-3 text-sm">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-border bg-card px-4 py-3 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Total jobs</span>
           <span className="font-semibold tabular-nums">{total}</span>
         </div>
-        <div className="w-px h-4 bg-border" />
+        <div className="hidden sm:block w-px h-4 bg-border" />
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Failure rate</span>
           <span className={cn(
@@ -136,7 +121,7 @@ function DashboardPage() {
             {failurePct}%
           </span>
         </div>
-        <div className="w-px h-4 bg-border" />
+        <div className="hidden sm:block w-px h-4 bg-border" />
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">DLQ</span>
           {dlqCount > 0 ? (
@@ -148,7 +133,7 @@ function DashboardPage() {
             <span className="font-semibold tabular-nums text-status-completed">0</span>
           )}
         </div>
-        <div className="w-px h-4 bg-border" />
+        <div className="hidden sm:block w-px h-4 bg-border" />
         <div className="flex items-center gap-2">
           <HugeiconsIcon icon={FlowIcon} strokeWidth={2} className="size-3 text-status-processing motion-safe:animate-pulse" />
           <span className="text-muted-foreground">Processing</span>

@@ -221,16 +221,16 @@ function JobsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className={cn(TH, "hidden md:table-cell")}>ID</TableHead>
+                <TableHead className={TH}>ID</TableHead>
                 <TableHead className={TH}>Type</TableHead>
-                <TableHead className={cn(TH, "hidden md:table-cell")}>Priority</TableHead>
+                <TableHead className={TH}>Priority</TableHead>
                 <TableHead className={TH}>Status</TableHead>
-                <TableHead className={cn(TH, "hidden sm:table-cell")}>Retries</TableHead>
-                <TableHead className={cn(TH, "hidden lg:table-cell")}>Interval</TableHead>
-                <TableHead className={cn(TH, "hidden xl:table-cell")}>Started</TableHead>
-                <TableHead className={cn(TH, "hidden xl:table-cell")}>Completed</TableHead>
-                <TableHead className={cn(TH, "hidden lg:table-cell")}>Created</TableHead>
-                <TableHead className={cn(TH, "hidden sm:table-cell")}>Scheduled</TableHead>
+                <TableHead className={TH}>Retries</TableHead>
+                <TableHead className={TH}>Interval</TableHead>
+                <TableHead className={TH}>Started</TableHead>
+                <TableHead className={TH}>Completed</TableHead>
+                <TableHead className={TH}>Created</TableHead>
+                <TableHead className={TH}>Scheduled</TableHead>
                 <TableHead className={cn(TH, "w-20")}>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -240,11 +240,11 @@ function JobsPage() {
                   key={job.id}
                   className={cn(flashingIds.includes(job.id) && "animate-row-flash")}
                 >
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell>
                     <IdCell id={job.id} />
                   </TableCell>
                   <TableCell className="font-medium text-foreground text-xs sm:text-sm">{job.type}</TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell>
                     <span
                       className={cn("font-mono text-xs tabular-nums", priorityColor(job.priority))}
                     >
@@ -259,24 +259,24 @@ function JobsPage() {
                       {job.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell font-mono text-xs tabular-nums text-muted-foreground">
+                  <TableCell className="font-mono text-xs tabular-nums text-muted-foreground">
                     <span className={job.retryCount >= job.maxRetries ? "text-status-failed" : ""}>
                       {job.retryCount}/{job.maxRetries}
                     </span>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground">
                     {intervalLabel(job.interval)}
                   </TableCell>
-                  <TableCell className="hidden xl:table-cell font-mono text-xs tabular-nums whitespace-nowrap text-muted-foreground">
+                  <TableCell className="font-mono text-xs tabular-nums whitespace-nowrap text-muted-foreground">
                     <DateCell date={job.startedAt} />
                   </TableCell>
-                  <TableCell className="hidden xl:table-cell font-mono text-xs tabular-nums whitespace-nowrap text-muted-foreground">
+                  <TableCell className="font-mono text-xs tabular-nums whitespace-nowrap text-muted-foreground">
                     <DateCell date={job.completedAt} />
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell font-mono text-xs tabular-nums whitespace-nowrap text-muted-foreground">
+                  <TableCell className="font-mono text-xs tabular-nums whitespace-nowrap text-muted-foreground">
                     <DateCell date={job.createdAt} />
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell font-mono text-xs tabular-nums whitespace-nowrap text-muted-foreground">
+                  <TableCell className="font-mono text-xs tabular-nums whitespace-nowrap text-muted-foreground">
                     <DateCell date={job.scheduledAt} />
                   </TableCell>
                   <TableCell>
