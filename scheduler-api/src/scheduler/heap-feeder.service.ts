@@ -21,6 +21,7 @@ export class HeapFeederService implements OnModuleInit, OnModuleDestroy {
   private readonly inHeap = new Set<string>();
   private feedInterval?: ReturnType<typeof setInterval>;
   private starvationInterval?: ReturnType<typeof setInterval>;
+  private feedGeneration = 0;
 
   constructor(
     @InjectRepository(Job)
@@ -65,9 +66,14 @@ export class HeapFeederService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
+    const generation = this.feedGeneration;
     let addedCount = 0;
 
     for (const job of jobs) {
+      if (generation !== this.feedGeneration) {
+        break;
+      }
+
       if (this.inHeap.has(job.id)) {
         continue;
       }
@@ -143,5 +149,6 @@ export class HeapFeederService implements OnModuleInit, OnModuleDestroy {
   private resetHeap(): void {
     this.jobPriorityHeap.clear();
     this.inHeap.clear();
+    this.feedGeneration++;
   }
 }

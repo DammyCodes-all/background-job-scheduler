@@ -128,22 +128,17 @@ export class JobsService {
   async update(id: string, updateJobDto: UpdateJobDto): Promise<Job> {
     await this.findOne(id);
 
+    const { status: _status, ...safeDto } = updateJobDto;
+
     const dependencyIds =
-      updateJobDto.dependencyIds === undefined
+      safeDto.dependencyIds === undefined
         ? undefined
-        : await this.validateDependencyIds(updateJobDto.dependencyIds, id);
+        : await this.validateDependencyIds(safeDto.dependencyIds, id);
 
     await this.jobsRepository.update(id, {
-      ...updateJobDto,
+      ...safeDto,
       ...(dependencyIds === undefined ? {} : { dependencyIds }),
     });
-
-    if (updateJobDto.status === JobStatus.CANCELLED) {
-      this.sseService.emit('job_updated', {
-        jobId: id,
-        status: JobStatus.CANCELLED,
-      });
-    }
 
     return this.findOne(id);
   }
