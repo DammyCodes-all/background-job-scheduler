@@ -449,6 +449,30 @@ The heap pop and the DB claim are not atomic. Two ticks of the same worker could
 
 ---
 
+## Job Handlers
+
+### Handler dispatch
+
+When the worker claims a job, it looks up a handler by `job.type` using a `HandlersRegistry` — an injectable map of type strings to `JobHandler` instances. Every handler implements a `execute(job): Promise<void>` contract. If no handler is registered for the job type, the `DefaultJobHandler` logs the execution and returns successfully.
+
+### Registration via Dependency Injection
+
+Handlers are NestJS providers injected into `WorkerService`. During `onModuleInit`, each handler is registered with the `HandlersRegistry` by type string. The registry is an `@Injectable()` wrapper around a `Map<string, JobHandler>`. Handler classes are listed as providers in `WorkerModule`.
+
+### DefaultJobHandler
+
+Fallback when no handler is registered for a given type. Logs the execution and succeeds silently. Useful for testing and for job types that only need the scheduler infrastructure (retry, DLQ, logging) without custom logic.
+
+### DlqAlertHandler
+
+Triggered when the total DLQ count reaches 10 or more (1-hour cooldown between alerts). The worker creates a priority-0 `dlq_alert` job with `payload.dlqCount`. Currently logs a warning — designed as a swap point for integration with PagerDuty, Slack, or email notification.
+
+### EmailHandler
+
+Handler for `type: 'send_email'` jobs. Validates `to`, `subject`, and `body` as required non-empty strings. Simulates an external API call with a random 500–5000ms delay, then throws an error 50% of the time (`ERROR_RATE = 0.5`) to exercise the retry pipeline and populate the DLQ naturally for demo purposes. On success, logs the actual delay. In production this would call a real email provider.
+
+---
+
 ## Pagination
 
 `GET /jobs` and `GET /jobs/dlq` accept optional `page` (default 1) and `limit` (default 20, max 100) query parameters. Both return a `PaginatedResult<Job>` envelope:

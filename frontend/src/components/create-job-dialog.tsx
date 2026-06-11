@@ -167,7 +167,7 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
         onOpenChange(v);
       }}
     >
-      <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
+      <SheetContent side="right" className="data-[side=right]:w-full sm:data-[side=right]:max-w-md p-0 flex flex-col">
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
@@ -270,12 +270,12 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
               </span>
             </div>
 
-            <FieldGroup className="flex-row">
-              <Field>
+            <FieldGroup className="flex-col sm:flex-row">
+              <Field className="w-full sm:flex-1">
                 <FieldLabel>Date</FieldLabel>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-32 justify-between font-normal h-8">
+                    <Button variant="outline" className="w-full sm:w-32 justify-between font-normal h-8">
                       {scheduledAt ? format(scheduledAt, "PPP") : "Select date"}
                       <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="size-4" />
                     </Button>
@@ -292,7 +292,7 @@ export function CreateJobDialog({ open, onOpenChange }: Props) {
                   </PopoverContent>
                 </Popover>
               </Field>
-              <Field className="w-32">
+              <Field className="w-full sm:w-32">
                 <FieldLabel>Time</FieldLabel>
                 <Input
                   type="time"

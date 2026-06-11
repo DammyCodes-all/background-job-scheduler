@@ -21,7 +21,7 @@ async function bootstrap() {
     .setTitle('Background Job Scheduler API')
     .setDescription('The API documentation for the Background Job Scheduler')
     .setVersion('1.0')
-    .addBearerAuth() // Optional: Adds JWT Authentication button to Swagger
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

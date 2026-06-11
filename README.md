@@ -85,6 +85,8 @@ GET /
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/jobs` | List jobs (paginated, newest first) |
+| `GET` | `/jobs` | List jobs (paginated, newest first) |
+| `GET` | `/jobs/stats` | Get per-status counts (pending, processing, completed, failed, cancelled, total) |
 | `GET` | `/jobs/dlq` | List dead-letter queue jobs |
 | `GET` | `/jobs/:id` | Get single job |
 | `POST` | `/jobs` | Create a job |
@@ -163,25 +165,15 @@ A slide-over Sheet (`/jobs/new`) with:
 
 ## Adding a Job Handler
 
-```typescript
-// scheduler-api/src/worker/handlers/your-handler.ts
-import { JobHandler } from './handlers-registry';
+Create a class in `scheduler-api/src/worker/handlers/` that implements the `JobHandler` interface (`execute(job: Job): Promise<void>`). Add it as a provider in `WorkerModule`, inject it into `WorkerService`, and register it in `onModuleInit` via `this.handlersRegistry.register('your_type', handler)`. Jobs created with `type: "your_type"` will automatically be routed to this handler.
 
-export class YourHandler implements JobHandler {
-  async execute(job: Job): Promise<void> {
-    // your business logic here
-  }
-}
-```
+### Built-in handlers
 
-Then register it in the module:
-
-```typescript
-// scheduler-api/src/worker/worker.module.ts or a dedicated handler module
-handlersRegistry.register('your_type', new YourHandler());
-```
-
-Jobs created with `type: "your_type"` will automatically be routed to this handler.
+| Type | Handler | Behavior |
+|------|---------|----------|
+| `send_email` | `EmailHandler` | Validates `to`/`subject`/`body` payload; simulates 500–5000ms API call; 50% random failure rate |
+| `dlq_alert` | `DlqAlertHandler` | Internal; triggers when DLQ count ≥10; logs a warning |
+| *(unregistered)* | `DefaultJobHandler` | Fallback for undefined types; logs and succeeds |
 
 ## Environment Variables
 
@@ -216,6 +208,7 @@ pnpm migration:run      # Apply migrations
 pnpm migration:generate # Generate migration from entity changes
 pnpm migration:revert   # Roll back last migration
 pnpm db:clear           # Truncate all jobs
+pnpm seed               # Insert 24 demo send_email jobs (5s stagger, 1min interval)
 ```
 
 ### Frontend
