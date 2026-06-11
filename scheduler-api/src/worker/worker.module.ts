@@ -5,6 +5,7 @@ import { JobLog } from '../jobs/entities/job-logs.entity';
 import { SchedulerModule } from '../scheduler/scheduler.module';
 import { DefaultJobHandler } from './default-job-handler';
 import { DlqAlertHandler } from './handlers/dlq-alert.handler';
+import { EmailHandler } from './handlers/email.handler';
 import { HandlersRegistry } from './handlers-registry';
 import { JobLogger } from './job-logger.service';
 import { WorkerService } from './worker.service';
@@ -16,6 +17,7 @@ import { WorkerService } from './worker.service';
     HandlersRegistry,
     DefaultJobHandler,
     DlqAlertHandler,
+    EmailHandler,
     JobLogger,
   ],
 })

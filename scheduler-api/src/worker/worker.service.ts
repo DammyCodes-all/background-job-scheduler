@@ -20,6 +20,7 @@ import {
 } from './constants';
 import { DefaultJobHandler } from './default-job-handler';
 import { DlqAlertHandler } from './handlers/dlq-alert.handler';
+import { EmailHandler } from './handlers/email.handler';
 import { HandlersRegistry } from './handlers-registry';
 import { JobLogger } from './job-logger.service';
 
@@ -37,11 +38,13 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly handlersRegistry: HandlersRegistry,
     private readonly defaultHandler: DefaultJobHandler,
     private readonly dlqAlertHandler: DlqAlertHandler,
+    private readonly emailHandler: EmailHandler,
     private readonly sseService: SseService,
   ) {}
 
   onModuleInit(): void {
     this.handlersRegistry.register('dlq_alert', this.dlqAlertHandler);
+    this.handlersRegistry.register('send_email', this.emailHandler);
     this.scheduleNext();
   }
 

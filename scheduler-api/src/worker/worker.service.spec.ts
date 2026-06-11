@@ -6,6 +6,7 @@ import { SseService } from '../common/sse/sse.service';
 import { HeapFeederService } from '../scheduler/heap-feeder.service';
 import { DefaultJobHandler } from './default-job-handler';
 import { DlqAlertHandler } from './handlers/dlq-alert.handler';
+import { EmailHandler } from './handlers/email.handler';
 import { HandlersRegistry } from './handlers-registry';
 import { JobLogger } from './job-logger.service';
 import { WorkerService } from './worker.service';
@@ -44,6 +45,7 @@ describe('WorkerService', () => {
   let handlersRegistry: jest.Mocked<HandlersRegistry>;
   let defaultHandler: jest.Mocked<DefaultJobHandler>;
   let dlqAlertHandler: jest.Mocked<DlqAlertHandler>;
+  let emailHandler: jest.Mocked<EmailHandler>;
   let sseService: jest.Mocked<SseService>;
   let service: WorkerService;
 
@@ -85,6 +87,10 @@ describe('WorkerService', () => {
       execute: jest.fn(),
     } as unknown as jest.Mocked<DlqAlertHandler>;
 
+    emailHandler = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<EmailHandler>;
+
     sseService = {
       emit: jest.fn(),
     } as unknown as jest.Mocked<SseService>;
@@ -96,6 +102,7 @@ describe('WorkerService', () => {
       handlersRegistry,
       defaultHandler,
       dlqAlertHandler,
+      emailHandler,
       sseService,
     );
   });
