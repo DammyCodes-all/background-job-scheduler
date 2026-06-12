@@ -162,6 +162,7 @@ describe('JobsService', () => {
     const result = await service.findAll({ page: 2, limit: 2 });
 
     expect(repository.findAndCount).toHaveBeenCalledWith({
+      where: {},
       skip: 2,
       take: 2,
       order: { createdAt: 'DESC' },
@@ -171,6 +172,58 @@ describe('JobsService', () => {
     expect(result.page).toBe(2);
     expect(result.limit).toBe(2);
     expect(result.totalPages).toBe(5);
+  });
+
+  it('filters paginated jobs by status and search', async () => {
+    const repository = createRepository();
+    repository.findAndCount.mockResolvedValue([[{ id: 'job-1' }], 1]);
+    const service = createService(repository);
+
+    const result = await service.findAll({
+      page: 1,
+      limit: 20,
+      status: JobStatus.PROCESSING,
+      search: 'email',
+    });
+
+    expect(repository.findAndCount).toHaveBeenCalledWith({
+      where: {
+        status: JobStatus.PROCESSING,
+        type: expect.objectContaining({
+          _type: 'ilike',
+          _value: '%email%',
+        }),
+      },
+      skip: 0,
+      take: 20,
+      order: { createdAt: 'DESC' },
+    });
+    expect(result.total).toBe(1);
+  });
+
+  it('prefers the explicit type filter over search for paginated jobs', async () => {
+    const repository = createRepository();
+    repository.findAndCount.mockResolvedValue([[{ id: 'job-1' }], 1]);
+    const service = createService(repository);
+
+    await service.findAll({
+      page: 1,
+      limit: 20,
+      type: 'send_email',
+      search: 'ignored',
+    });
+
+    expect(repository.findAndCount).toHaveBeenCalledWith({
+      where: {
+        type: expect.objectContaining({
+          _type: 'ilike',
+          _value: '%send_email%',
+        }),
+      },
+      skip: 0,
+      take: 20,
+      order: { createdAt: 'DESC' },
+    });
   });
 
   it('returns paginated DLQ jobs', async () => {

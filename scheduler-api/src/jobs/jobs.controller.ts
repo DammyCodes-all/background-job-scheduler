@@ -24,6 +24,7 @@ import { Job } from './entities/job.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { PaginationDto } from './dto/pagination.dto';
+import { ListJobsQueryDto } from './dto/list-jobs-query.dto';
 import { PaginatedResultDto } from './dto/paginated-result.dto';
 import { StatsResponseDto } from './dto/stats-response.dto';
 
@@ -68,15 +69,15 @@ export class JobsController {
   @ApiOperation({
     summary: 'Get all jobs (paginated)',
     description:
-      'Returns a paginated list of all jobs ordered by createdAt DESC. Supports page and limit query parameters.',
+      'Returns a paginated list of jobs ordered by createdAt DESC. Supports page, limit, status, type, and search query parameters.',
   })
   @ApiResponse({
     status: 200,
     description: 'Paginated list of jobs.',
     type: PaginatedResultDto,
   })
-  findAll(@Query() pagination: PaginationDto) {
-    return this.jobsService.findAll(pagination);
+  findAll(@Query() query: ListJobsQueryDto) {
+    return this.jobsService.findAll(query);
   }
 
   @Get('dlq')

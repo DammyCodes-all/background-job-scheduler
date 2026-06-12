@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { FindOptionsWhere, ILike, Repository, In } from 'typeorm';
 import { SseService } from '../common/sse/sse.service';
 import { PaginatedResult } from '../common/types/paginated-result';
 import { Job, JobStatus } from './entities/job.entity';
@@ -13,6 +13,7 @@ import { JobLog } from './entities/job-logs.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { PaginationDto } from './dto/pagination.dto';
+import { ListJobsQueryDto } from './dto/list-jobs-query.dto';
 
 @Injectable()
 export class JobsService {
@@ -53,10 +54,22 @@ export class JobsService {
     return saved;
   }
 
-  async findAll(pagination: PaginationDto): Promise<PaginatedResult<Job>> {
-    const { page = 1, limit = 20 } = pagination;
+  async findAll(query: ListJobsQueryDto): Promise<PaginatedResult<Job>> {
+    const { page = 1, limit = 20, status, search, type } = query;
     const skip = (page - 1) * limit;
+    const where: FindOptionsWhere<Job> = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    const typeFilter = type?.trim() || search?.trim();
+    if (typeFilter) {
+      where.type = ILike(`%${typeFilter}%`);
+    }
+
     const [data, total] = await this.jobsRepository.findAndCount({
+      where,
       skip,
       take: limit,
       order: { createdAt: 'DESC' },
