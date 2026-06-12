@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   useJobsQuery,
   useCancelJobMutation,
@@ -120,15 +120,31 @@ function JobsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const flashingIds = useJobStore((s) => s.flashingIds);
-  const { data, isLoading } = useJobsQuery(page);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  const queryFilters = useMemo(
+    () => ({
+      page,
+      status: statusFilter === "all" ? undefined : statusFilter,
+      search: debouncedSearch || undefined,
+    }),
+    [page, statusFilter, debouncedSearch],
+  );
+
+  const { data, isLoading, isFetching } = useJobsQuery(queryFilters);
   const { data: stats } = useJobStats();
   const cancelJob = useCancelJobMutation();
   const deleteJob = useDeleteJobMutation();
 
-  const allJobs = useMemo(() => data?.data ?? [], [data?.data]);
+  const jobs = useMemo(() => data?.data ?? [], [data?.data]);
   const totalCounts = useMemo(() => {
     const counts: Record<string, number> = { all: stats?.total ?? 0 };
     for (const s of ALL_STATUSES) {
@@ -138,12 +154,6 @@ function JobsPage() {
     }
     return counts;
   }, [stats]);
-
-  const filtered = useMemo(() => {
-    return allJobs
-      .filter((job) => statusFilter === "all" || job.status === statusFilter)
-      .filter((job) => !search || job.type.toLowerCase().includes(search.toLowerCase()));
-  }, [allJobs, statusFilter, search]);
 
   if (isLoading) {
     return (
@@ -161,9 +171,8 @@ function JobsPage() {
           <div>
             <h1 className="text-lg font-semibold">Jobs</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {filtered.length === allJobs.length
-                ? `${data?.total ?? 0} total`
-                : `${filtered.length} of ${data?.total ?? 0}`}{" "}
+              {data?.total ?? 0} matching jobs
+              {isFetching ? " — refreshing" : ""} {""}
               &mdash; page {page} of {data?.totalPages ?? 1}
             </p>
           </div>
@@ -186,7 +195,11 @@ function JobsPage() {
             <ToggleGroup
               type="single"
               value={statusFilter}
-              onValueChange={(v) => v && setStatusFilter(v as JobStatus | "all")}
+              onValueChange={(v) => {
+                if (!v) return;
+                setStatusFilter(v as JobStatus | "all");
+                setPage(1);
+              }}
               variant="filter"
               size="xs"
               className="flex-nowrap"
@@ -211,7 +224,10 @@ function JobsPage() {
             <Input
               placeholder={"Search by type\u2026"}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="h-7 pl-7"
             />
           </div>
@@ -235,7 +251,7 @@ function JobsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((job) => (
+              {jobs.map((job) => (
                 <TableRow
                   key={job.id}
                   className={cn(flashingIds.includes(job.id) && "animate-row-flash")}
@@ -243,7 +259,9 @@ function JobsPage() {
                   <TableCell>
                     <IdCell id={job.id} />
                   </TableCell>
-                  <TableCell className="font-medium text-foreground text-xs sm:text-sm">{job.type}</TableCell>
+                  <TableCell className="font-medium text-foreground text-xs sm:text-sm">
+                    {job.type}
+                  </TableCell>
                   <TableCell>
                     <span
                       className={cn("font-mono text-xs tabular-nums", priorityColor(job.priority))}
@@ -309,14 +327,15 @@ function JobsPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {filtered.length === 0 && (
+              {jobs.length === 0 && (
                 <TableRow>
-                  <TableCell
-                    colSpan={11}
-                    className="text-center py-12 text-muted-foreground"
-                  >
+                  <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
-                      <HugeiconsIcon icon={ClipboardListIcon} strokeWidth={1.5} className="size-8 text-muted-foreground/30" />
+                      <HugeiconsIcon
+                        icon={ClipboardListIcon}
+                        strokeWidth={1.5}
+                        className="size-8 text-muted-foreground/30"
+                      />
                       <span className="text-xs">
                         {search || statusFilter !== "all"
                           ? "No jobs match the current filters"

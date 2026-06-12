@@ -25,7 +25,9 @@ const createJob = (overrides: Partial<Job> = {}): Job => ({
 });
 
 describe('StuckProcessingSweeperService', () => {
-  let jobsRepository: jest.Mocked<Pick<Repository<Job>, 'find' | 'createQueryBuilder'>>;
+  let jobsRepository: jest.Mocked<
+    Pick<Repository<Job>, 'find' | 'createQueryBuilder'>
+  >;
   let queryBuilder: {
     update: jest.Mock;
     set: jest.Mock;
@@ -75,6 +77,7 @@ describe('StuckProcessingSweeperService', () => {
     expect(jobsRepository.find).toHaveBeenCalledWith({
       where: {
         status: JobStatus.PROCESSING,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         startedAt: expect.objectContaining({
           _type: 'lessThanOrEqual',
           _value: new Date(NOW.getTime() - STUCK_PROCESSING_TIMEOUT_MS),

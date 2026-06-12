@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { SseService } from '../common/sse/sse.service';
+import { JobLog } from './entities/job-logs.entity';
 import { Job, JobStatus } from './entities/job.entity';
 import { JobsService } from './jobs.service';
 
@@ -38,7 +39,7 @@ const mockLogRepo = { save: jest.fn() };
 const createService = (repository: MockRepository): JobsService =>
   new JobsService(
     repository as unknown as Repository<Job>,
-    mockLogRepo as unknown as Repository<any>,
+    mockLogRepo as unknown as Repository<JobLog>,
     mockSseService as unknown as SseService,
   );
 
@@ -189,6 +190,7 @@ describe('JobsService', () => {
     expect(repository.findAndCount).toHaveBeenCalledWith({
       where: {
         status: JobStatus.PROCESSING,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         type: expect.objectContaining({
           _type: 'ilike',
           _value: '%email%',
@@ -215,6 +217,7 @@ describe('JobsService', () => {
 
     expect(repository.findAndCount).toHaveBeenCalledWith({
       where: {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         type: expect.objectContaining({
           _type: 'ilike',
           _value: '%send_email%',

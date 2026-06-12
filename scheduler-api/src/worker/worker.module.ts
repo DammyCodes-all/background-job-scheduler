@@ -8,6 +8,7 @@ import { DlqAlertHandler } from './handlers/dlq-alert.handler';
 import { EmailHandler } from './handlers/email.handler';
 import { HandlersRegistry } from './handlers-registry';
 import { JobLogger } from './job-logger.service';
+import { StuckProcessingSweeperService } from './stuck-processing-sweeper.service';
 import { WorkerService } from './worker.service';
 
 @Module({
@@ -19,6 +20,7 @@ import { WorkerService } from './worker.service';
     DlqAlertHandler,
     EmailHandler,
     JobLogger,
+    StuckProcessingSweeperService,
   ],
 })
 export class WorkerModule {}
