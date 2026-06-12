@@ -310,6 +310,7 @@ describe('WorkerService', () => {
         errorMessage: 'final error',
         inDlq: true,
         retryCount: 3,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         completedAt: expect.any(Date),
       });
       expect(jobLogger.log).toHaveBeenCalledWith(
